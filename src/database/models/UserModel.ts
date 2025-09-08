@@ -1,6 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToMany } from "typeorm";
 import { IsBoolean } from "class-validator";
 import { Organization } from "./OrganizationModel";
+import { Notification } from "./NotificationsModel";
 
 @Entity()
 export class Users {
@@ -65,6 +66,12 @@ export class Users {
 
   @Column({ nullable: true })
   profilePicUrl?: string;
+
+  @OneToMany(() => Notification, notification => notification.user, { cascade: true })
+  notifications!: Notification[];
+
+  @Column("simple-json", { nullable: true })
+  notificationSettings?: Record<string, any>;
 
   @CreateDateColumn()
   createdAt!: Date;
