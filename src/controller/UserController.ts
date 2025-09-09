@@ -483,7 +483,7 @@ static async getUserById(req: Request, res: Response): Promise<void> {
         const userRepository = AppDataSource.getRepository(Users);
 
         const userId = Number(req.params.id);
-        const { firstName, lastName, email, isActive, password } = req.body;
+        const { firstName, lastName, email, isActive, organizationId } = req.body;
 
         // Find existing user
         const user = await userRepository.findOne({
@@ -500,9 +500,10 @@ static async getUserById(req: Request, res: Response): Promise<void> {
         if (email !== undefined) user.email = email;
         if (isActive !== undefined) user.isActive = isActive;
 
-        // Update password if provided
-        if (password) {
-            user.password = await bcrypt.hash(password, 10);
+        // Update organization if provided
+        if (organizationId !== undefined) {
+            const organization = await AppDataSource.getRepository(Organization).findOneBy({ id: organizationId });
+            if (organization) user.organization = organization;
         }
 
         // Save updated user
