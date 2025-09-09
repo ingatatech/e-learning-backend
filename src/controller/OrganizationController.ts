@@ -189,9 +189,7 @@ static async updateOrganizationInfo(req: CustomRequest, res: Response): Promise<
 
       const orgRepository = AppDataSource.getRepository(Organization);
       const org = await AppDataSource.getRepository(Organization).findOne({
-        where: { id: Number(id) },
-        relations: ['owner'],
-      });
+        where: { id: Number(id) }});
 
       if (!org) {
         res.status(404).json({ message: 'Organization not found.' });
@@ -209,6 +207,7 @@ static async updateOrganizationInfo(req: CustomRequest, res: Response): Promise<
       await orgRepository.remove(org);
       res.status(200).json({ message: 'Organization deleted successfully.' });
     } catch (error) {
+      console.log(error)
       res.status(500).json({ message: 'Something went wrong, please try again.', error });
     }
   }
