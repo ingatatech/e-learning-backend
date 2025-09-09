@@ -7,12 +7,15 @@ import bcrypt, { compare, hash } from "bcryptjs";import { generateOtp } from "..
 import { sendOtpEmail } from "../services/SessionOtp";
 import { Otp } from "../database/models/OtpModel";
 import { MoreThan } from "typeorm";
+import { OAuth2Client } from "google-auth-library";
 
 
 dotenv.config();
 
 const SECRET_KEY = process.env.JWT_SECRET || "default_secret_key";
 const COOKIE_EXPIRATION = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
 
 
 export const login = async (req: Request, res: Response): Promise<void> => {
@@ -110,9 +113,6 @@ export const resendOtp = async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
-
-
 
 
 export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
@@ -221,6 +221,87 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
   }
 }
 
+
+  export const  googleLogin = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { token } = req.body;
+
+      if (!token) {
+        res.status(400).json({ message: "Google token is required." });
+        return;
+      }
+
+      // Verify Google token
+      const ticket = await client.verifyIdToken({
+        idToken: token,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+
+      const payload = ticket.getPayload();
+      if (!payload || !payload.email) {
+        res.status(400).json({ message: "Invalid Google token." });
+        return;
+      }
+
+      const email = payload.email;
+
+      // Check if user exists in DB
+      const userRepo = AppDataSource.getRepository(Users);
+      const user = await userRepo.findOne({ where: { email } });
+
+      if (!user) {
+        res.status(401).json({ message: "No account found for this email. Contact admin." });
+        return;
+      }
+
+      // Create JWT
+      const accessToken = jwt.sign(
+        {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          isEmailVerified: user.isEmailVerified,
+          isActive: user.isActive,
+          preferredLanguage: user.preferredLanguage,
+          theme: user.theme,
+          totalPoints: user.totalPoints,
+          level: user.level,
+          streakDays: user.streakDays,
+          organizationId: user.organization,
+          profilePicture: user.profilePicUrl
+        },
+        SECRET_KEY,
+        { expiresIn: "30d" }
+      );
+
+
+      res.status(200).json({
+        message: "Login successful.",
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          isEmailVerified: user.isEmailVerified,
+          isActive: user.isActive,
+          preferredLanguage: user.preferredLanguage,
+          theme: user.theme,
+          totalPoints: user.totalPoints,
+          level: user.level,
+          streakDays: user.streakDays,
+          organizationId: user.organization,
+          profilePicture: user.profilePicUrl
+        }
+      });
+    } catch (error) {
+      console.error("Google login error:", error);
+      res.status(500).json({ message: "Google login failed.", error });
+    }
+  }
 
 
 
@@ -746,3 +827,13 @@ static async getUserById(req: Request, res: Response): Promise<void> {
 
 
 }
+
+
+
+
+// =============================================================================
+
+
+
+
+

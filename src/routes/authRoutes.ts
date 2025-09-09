@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { UserClassController } from "../controller/UserController";
-import { login, logout, resendOtp, verifyOtp } from "../controller/UserController";
+import { login, logout, resendOtp, verifyOtp, googleLogin } from "../controller/UserController";
 import { authenticateToken } from "../middleware/JwtParsing";
 import { upload } from "../middleware/multer";
 
@@ -266,6 +266,59 @@ router.delete("/delete/:id", authenticateToken, UserClassController.deleteUser.b
  *         description: Invalid credentials
  */
 router.post('/login', login);
+
+
+/**
+ * @swagger
+ * /auth/google:
+ *   post:
+ *     summary: User login with Google
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: Google ID token obtained from Google Sign-In
+ *                 example: "eyJhbGciOiJSUzI1NiIsImtpZCI6Ij..."
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 token:
+ *                   type: string
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     firstName:
+ *                       type: string
+ *                     lastName:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     role:
+ *                       type: string
+ *       400:
+ *         description: Invalid or missing Google token
+ *       401:
+ *         description: No account found for this email
+ *       500:
+ *         description: Google login failed
+ */
+router.post("/google", googleLogin);
+
 
 
 /**
