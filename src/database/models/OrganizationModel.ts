@@ -22,16 +22,16 @@ export class Organization {
   @Column({ type: 'varchar', length: 255, nullable: true })
   address?: string;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   city?: string;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   country?: string;
 
-  @Column({ type: 'varchar', length: 20, nullable: true })
+  @Column({ type: 'varchar', length:255, nullable: true })
   phoneNumber?: string;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   website?: string;
 
   @OneToMany(() => Users, user => user.organization)
