@@ -464,6 +464,7 @@ static async getUserById(req: Request, res: Response): Promise<void> {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
+        role: user.role,
         isActive: user.isActive,
         profilePicUrl: user.profilePicUrl || null,
         organization: user.organization ?? null,
