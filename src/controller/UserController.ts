@@ -168,7 +168,8 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
         level: user.level,
         streakDays: user.streakDays,
         organizationId: user.organization,
-        profilePicture: user.profilePicUrl
+        profilePicture: user.profilePicUrl,
+        firstLogin: user.firstLogin
       },
       SECRET_KEY,
       { expiresIn: "30d" }
@@ -198,7 +199,8 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
         level: user.level,
         streakDays: user.streakDays,
         organizationId: user.organization,
-        profilePicture: user.profilePicUrl
+        profilePicture: user.profilePicUrl,
+        firstLogin: user.firstLogin
       }
     });
   } catch (err) {
@@ -270,7 +272,8 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
           level: user.level,
           streakDays: user.streakDays,
           organizationId: user.organization,
-          profilePicture: user.profilePicUrl
+          profilePicture: user.profilePicUrl,
+          firstLogin: user.firstLogin
         },
         SECRET_KEY,
         { expiresIn: "30d" }
@@ -279,7 +282,7 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
 
       res.status(200).json({
         message: "Login successful.",
-        token,
+        accessToken,
         user: {
           id: user.id,
           email: user.email,
@@ -294,7 +297,8 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
           level: user.level,
           streakDays: user.streakDays,
           organizationId: user.organization,
-          profilePicture: user.profilePicUrl
+          profilePicture: user.profilePicUrl,
+          firstLogin: user.firstLogin
         }
       });
     } catch (error) {
