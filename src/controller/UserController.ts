@@ -167,9 +167,9 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
         totalPoints: user.totalPoints,
         level: user.level,
         streakDays: user.streakDays,
-        organizationId: user.organization,
         profilePicture: user.profilePicUrl,
-        firstLogin: user.firstLogin
+        firstLogin: user.firstLogin,
+        organization: user.organization
       },
       SECRET_KEY,
       { expiresIn: "30d" }
@@ -198,31 +198,15 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
         totalPoints: user.totalPoints,
         level: user.level,
         streakDays: user.streakDays,
-        organizationId: user.organization,
         profilePicture: user.profilePicUrl,
-        firstLogin: user.firstLogin
+        firstLogin: user.firstLogin, 
+        organization: user.organization
       }
     });
   } catch (err) {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
-
-export const logout = async (req: Request, res: Response): Promise<void> => {
-  try {
-    res.clearCookie('authToken', {
-      httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-      secure: process.env.NODE_ENV === "production",
-    });
-
-    res.status(200).json({ message: "Logout successful." });
-  } catch (error) {
-    res.status(500).json({ message: "Internal Server Error during logout" });
-  }
-}
-
 
   export const  googleLogin = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -249,7 +233,7 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
 
       // Check if user exists in DB
       const userRepo = AppDataSource.getRepository(Users);
-      const user = await userRepo.findOne({ where: { email } });
+      const user = await userRepo.findOne({ where: { email }, relations: ["organization"] });
 
       if (!user) {
         res.status(401).json({ message: "No account found for this email. Contact admin." });
@@ -271,9 +255,9 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
           totalPoints: user.totalPoints,
           level: user.level,
           streakDays: user.streakDays,
-          organizationId: user.organization,
           profilePicture: user.profilePicUrl,
-          firstLogin: user.firstLogin
+          firstLogin: user.firstLogin,
+          organization: user.organization
         },
         SECRET_KEY,
         { expiresIn: "30d" }
@@ -296,9 +280,9 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
           totalPoints: user.totalPoints,
           level: user.level,
           streakDays: user.streakDays,
-          organizationId: user.organization,
           profilePicture: user.profilePicUrl,
-          firstLogin: user.firstLogin
+          firstLogin: user.firstLogin,
+          organization: user.organization
         }
       });
     } catch (error) {

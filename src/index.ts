@@ -82,7 +82,7 @@ app.use((err: any, req: any, res: any, next: any) => {
   }
 
   console.error("Unhandled error in middleware:", err);
-  res.status(500).json({ message: "Server error", error: err.message || String(err) });
+  res.status(500).json({ message: "Server error", error: String(err) });
 });
 
 

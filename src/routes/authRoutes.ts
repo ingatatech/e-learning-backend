@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { UserClassController } from "../controller/UserController";
-import { login, logout, resendOtp, verifyOtp, googleLogin } from "../controller/UserController";
+import { login, resendOtp, verifyOtp, googleLogin } from "../controller/UserController";
 import { authenticateToken } from "../middleware/JwtParsing";
 import { upload } from "../middleware/multer";
 
@@ -359,23 +359,6 @@ router.post("/google", googleLogin);
  *         description: Internal server error
  */
 router.post('/resend-otp', resendOtp);
-
-
-
-// Logout
-/**
- * @swagger
- * /auth/logout:
- *   post:
- *     summary: User logout
- *     tags: [Auth]
- *     responses:
- *       200:
- *         description: Logout successful
- *       500:
- *         description: Internal server error
- */
-router.post("/logout", logout);
 
 
 /**
