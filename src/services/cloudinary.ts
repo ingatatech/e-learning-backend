@@ -22,3 +22,7 @@ export { cloudinary };
 export const uploadToCloudinary = (filePath: string): Promise<any> => {
   return cloudinary.uploader.upload(filePath, { folder: 'profile_pics' });
 };
+
+export const uploadToCloud = (filePath: string): Promise<any> => {
+  return cloudinary.uploader.upload(filePath, { folder: 'thumbnails' });
+};

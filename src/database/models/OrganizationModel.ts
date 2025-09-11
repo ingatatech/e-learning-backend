@@ -7,6 +7,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { Users } from './UserModel';
+import { Course } from './CourseModel';
 
 @Entity('organization')
 export class Organization {
@@ -36,6 +37,9 @@ export class Organization {
 
   @OneToMany(() => Users, user => user.organization)
   users!: Users[];
+
+  @OneToMany(() => Course, course => course.organization)
+  courses!: Course[];
 
   @CreateDateColumn()
   createdAt!: Date;

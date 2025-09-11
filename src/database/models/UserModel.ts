@@ -2,6 +2,8 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 import { IsBoolean } from "class-validator";
 import { Organization } from "./OrganizationModel";
 import { Notification } from "./NotificationsModel";
+import { Course } from "./CourseModel";
+import { Enrollment } from "./EnrollmentModel";
 
 @Entity()
 export class Users {
@@ -69,6 +71,12 @@ export class Users {
 
   @OneToMany(() => Notification, notification => notification.user, { cascade: true })
   notifications!: Notification[];
+
+  @OneToMany(() => Course, (course) => course.instructor)
+  courses!: Course[];
+
+  @OneToMany(() => Enrollment, (enrollment) => enrollment.user, { cascade: true })
+  enrollments!: Enrollment[];
 
   @Column("simple-json", { nullable: true })
   notificationSettings?: Record<string, any>;
