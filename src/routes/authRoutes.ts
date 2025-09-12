@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { UserClassController } from "../controller/UserController";
-import { login, resendOtp, verifyOtp, googleLogin } from "../controller/UserController";
+import { login, logout, resendOtp, verifyOtp, googleLogin } from "../controller/UserController";
 import { authenticateToken } from "../middleware/JwtParsing";
 import { upload } from "../middleware/multer";
 
@@ -579,6 +579,21 @@ router.post('/forgot-password', UserClassController.forgotPassword);
  *         description: Server error
  */
 router.post('/reset-password', UserClassController.resetPassword);
+
+// Logout
+/**
+ * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: User logout
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ *       500:
+ *         description: Internal server error
+ */
+router.post("/logout", logout);
 
 
 /**

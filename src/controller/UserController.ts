@@ -263,11 +263,12 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
         { expiresIn: "30d" }
       );
 
-      res.cookie("accessToken", token, {
+      res.cookie("accessToken", accessToken, {
         httpOnly: true,
         maxAge: COOKIE_EXPIRATION,
         sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
         secure: process.env.NODE_ENV === "production",
+        path: "/",
       });
 
       res.status(200).json({
@@ -294,6 +295,20 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
     } catch (error) {
       console.error("Google login error:", error);
       res.status(500).json({ message: "Google login failed.", error });
+    }
+  }
+
+  export const logout = async (req: Request, res: Response): Promise<void> => {
+    try {
+      res.clearCookie('accessToken', {
+        httpOnly: true,
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        secure: process.env.NODE_ENV === "production",
+      });
+
+      res.status(200).json({ message: "Logout successful." });
+    } catch (error) {
+      res.status(500).json({ message: "Internal Server Error during logout" });
     }
   }
 
