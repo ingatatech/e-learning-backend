@@ -9,6 +9,7 @@ import { Users } from "../database/models/UserModel";
 import { excludePassword } from "../utils/excludePassword";
 import { uploadToCloud } from "../services/cloudinary";
 import { Organization } from "../database/models/OrganizationModel";
+import { Enrollment } from "../database/models/EnrollmentModel";
 
 export const createCourse = async (req: Request, res: Response) => {
   const courseRepo = AppDataSource.getRepository(Course);
@@ -194,6 +195,48 @@ export const getCourseById = async (req: Request, res: Response) => {
 };
 
 
+
+  export const getCoursesByOrganization = async (req: Request, res: Response) => {
+    const courseRepo = AppDataSource.getRepository(Course);
+    const organizationRepo = AppDataSource.getRepository(Organization);
+    const { orgId } = req.params;
+    const orgIdNum = Number(orgId);
+    if (isNaN(orgIdNum)) {
+      return res.status(400).json({ message: "Invalid organization id" });
+    }
+
+    try {
+      const organization = await organizationRepo.findOne({
+        where: { id: orgIdNum },
+      })
+      if (!organization) {
+        return res.status(404).json({ message: "Organization not found" });
+      }
+
+      const courses = await courseRepo.find({
+        where: { organization: { id: Number(orgId) } },
+        relations: ["instructor", "organization", "modules", "modules.lessons", "modules.lessons.assessments", "modules.lessons.assessments.questions"],
+        order: { createdAt: "DESC" },
+      });
+
+      if (!courses || courses.length === 0) {
+        return res.status(404).json({ message: "No courses found in this organization" });
+      }
+
+      const sanitizedCourses = courses.map(course => ({
+        ...course,
+        instructor: excludePassword(course.instructor),
+      }));
+
+      res.status(200).json({ message: "Courses fetched successfully", courses: sanitizedCourses });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: "Failed to fetch courses" });
+    }
+  }
+
+
+
   export const updateCourse = async (req: Request, res: Response) => {
   const courseRepo = AppDataSource.getRepository(Course);
   const moduleRepo = AppDataSource.getRepository(Module);
@@ -318,7 +361,6 @@ export const getCourseById = async (req: Request, res: Response) => {
     res.status(200).json({ message: "Course updated successfully" });
   } catch (err) {
     console.error(err);
-    console.log(err)
     res.status(500).json({ message: "Failed to update course" });
   }
 };
@@ -337,6 +379,40 @@ export const deleteCourse = async (req: Request, res: Response) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to delete course" });
+  }
+};
+
+
+export const getCoursesWithEnrollmentStatus = async (req: Request, res: Response) => {
+  const {userId } = req.body;
+  const courseRepo = AppDataSource.getRepository(Course);
+  const enrollmentRepo = AppDataSource.getRepository(Enrollment);
+
+  if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+  try {
+    const courses = await courseRepo.find({
+      relations: ["instructor", "organization", "modules"],
+      order: { createdAt: "DESC" },
+    });
+
+    // fetch all enrollments for this user in one go
+    const userEnrollments = await enrollmentRepo.find({
+      where: { user: { id: userId } },
+      relations: ["course"],
+    });
+    const enrolledCourseIds = new Set(userEnrollments.map(e => e.course.id));
+
+    const sanitizedCourses = courses.map(course => ({
+      ...course,
+      instructor: excludePassword(course.instructor),
+      isEnrolled: enrolledCourseIds.has(course.id),
+    }));
+
+    res.status(200).json({ message: "Courses fetched successfully", courses: sanitizedCourses });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch courses" });
   }
 };
 

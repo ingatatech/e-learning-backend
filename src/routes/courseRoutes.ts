@@ -1,7 +1,7 @@
 
 import { Router } from "express";
 import { authenticateToken } from "../middleware/JwtParsing";
-import { createCourse, deleteCourse, getCourseById, getCoursesByInstructor, updateCourse, uploadCourseThumbnail } from "../controller/CourseController";
+import { createCourse, deleteCourse, getCourseById, getCoursesByInstructor, getCoursesByOrganization, getCoursesWithEnrollmentStatus, updateCourse, uploadCourseThumbnail } from "../controller/CourseController";
 import { hasRole } from "../middleware/RoleMiddleware";
 const router = Router();
 import { upload } from "../middleware/multer";
@@ -429,6 +429,153 @@ router.get("/instructor/:instructorId/courses", authenticateToken, getCoursesByI
 
 /**
  * @swagger
+ * /courses/organization/{orgId}/courses:
+ *   get:
+ *     summary: Get all courses for a specific organization
+ *     tags: [Courses]
+ *     parameters:
+ *       - in: path
+ *         name: orgId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the organization
+ *     responses:
+ *       200:
+ *         description: List of courses fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Courses fetched successfully
+ *                 courses:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       title:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                       thumbnail:
+ *                         type: string
+ *                       level:
+ *                         type: string
+ *                       price:
+ *                         type: number
+ *                       isPublished:
+ *                         type: boolean
+ *                       duration:
+ *                         type: number
+ *                       enrollmentCount:
+ *                         type: number
+ *                       rating:
+ *                         type: number
+ *                       tags:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                       instructor:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           firstName:
+ *                             type: string
+ *                           lastName:
+ *                             type: string
+ *                           email:
+ *                             type: string
+ *                           role:
+ *                             type: string
+ *                       organization:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           name:
+ *                             type: string
+ *                       modules:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             id:
+ *                               type: string
+ *                             title:
+ *                               type: string
+ *                             description:
+ *                               type: string
+ *                             order:
+ *                               type: number
+ *                             lessons:
+ *                               type: array
+ *                               items:
+ *                                 type: object
+ *                                 properties:
+ *                                   id:
+ *                                     type: string
+ *                                   title:
+ *                                     type: string
+ *                                   content:
+ *                                     type: string
+ *                                   videoUrl:
+ *                                     type: string
+ *                                   duration:
+ *                                     type: number
+ *                                   order:
+ *                                     type: number
+ *                                   assessments:
+ *                                     type: array
+ *                                     items:
+ *                                       type: object
+ *                                       properties:
+ *                                         id:
+ *                                           type: string
+ *                                         title:
+ *                                           type: string
+ *                                         description:
+ *                                           type: string
+ *                                         type:
+ *                                           type: string
+ *                                         passingScore:
+ *                                           type: number
+ *                                         timeLimit:
+ *                                           type: number
+ *                                         questions:
+ *                                           type: array
+ *                                           items:
+ *                                             type: object
+ *                                             properties:
+ *                                               id:
+ *                                                 type: string
+ *                                               question:
+ *                                                 type: string
+ *                                               type:
+ *                                                 type: string
+ *                                               options:
+ *                                                 type: array
+ *                                                 items:
+ *                                                   type: string
+ *                                               correctAnswer:
+ *                                                 type: string
+ *                                               points:
+ *                                                 type: number
+ *       404:
+ *         description: No courses found for the given instructor
+ *       500:
+ *         description: Failed to fetch courses
+ */
+router.get("/organization/:orgId/courses", authenticateToken, getCoursesByOrganization);
+
+
+/**
+ * @swagger
  * /courses/update/{id}:
  *   put:
  *     summary: Update a course by ID
@@ -581,6 +728,69 @@ router.put("/update/:id", authenticateToken, updateCourse);
  *         description: Server error
  */
 router.delete("/delete/:id", authenticateToken, deleteCourse);
+
+
+/**
+ * @swagger
+ * /courses/enrollment-status:
+ *   post:
+ *     summary: Get all courses with enrollment status for a specific user
+ *     tags: [Courses]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: integer
+ *                 description: ID of the user to check enrollments
+ *                 example: 1
+ *     responses:
+ *       200:
+ *         description: List of courses with enrollment status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Courses fetched successfully
+ *                 courses:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       title:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                       thumbnail:
+ *                         type: string
+ *                       instructor:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           firstName:
+ *                             type: string
+ *                           lastName:
+ *                             type: string
+ *                           email:
+ *                             type: string
+ *                       isEnrolled:
+ *                         type: boolean
+ *                         description: Whether the user is enrolled in the course
+ *       401:
+ *         description: Unauthorized, userId not provided
+ *       500:
+ *         description: Failed to fetch courses
+ */
+router.post("/enrollment-status", getCoursesWithEnrollmentStatus);
 
 
 export default router;

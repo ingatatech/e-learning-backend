@@ -15,7 +15,7 @@ interface CustomRequest extends Request {
 
 export const authenticateToken = async (req: CustomRequest, res: Response, next: NextFunction): Promise<void> => {
   let authHeader = req.header("Authorization");
-  const tokenFromCookie = req.cookies?.authToken; // Token from cookies
+  const tokenFromCookie = req.cookies?.accessToken; // Token from cookies
 
   // Sanitize Authorization Header
   if (authHeader?.startsWith("Bearer Bearer ")) {
