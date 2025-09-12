@@ -175,7 +175,7 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
       { expiresIn: "30d" }
     );
 
-    res.cookie("authToken", token, {
+    res.cookie("accessToken", token, {
       httpOnly: true,
       maxAge: COOKIE_EXPIRATION,
       sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
@@ -263,6 +263,12 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
         { expiresIn: "30d" }
       );
 
+      res.cookie("accessToken", token, {
+        httpOnly: true,
+        maxAge: COOKIE_EXPIRATION,
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        secure: process.env.NODE_ENV === "production",
+      });
 
       res.status(200).json({
         message: "Login successful.",
