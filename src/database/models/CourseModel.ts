@@ -3,6 +3,8 @@ import { Users } from "./UserModel";
 import { Organization } from "./OrganizationModel";
 import { Module } from "./ModuleModel";
 import { Enrollment } from "./EnrollmentModel";
+import { Category } from "./CategoryModel";
+import { Review } from "./ReviewModel";
 
 export enum CourseLevel {
   BEGINNER = "beginner",
@@ -36,6 +38,9 @@ export class Course {
   @Column("int", { default: 0 })
   duration!: number; // in hours
 
+  @ManyToOne(() => Category, (category) => category.courses, { onDelete: "SET NULL" })
+  category!: Category;
+
   @Column("int", { default: 0 })
   enrollmentCount!: number;
 
@@ -56,6 +61,33 @@ export class Course {
 
   @OneToMany(() => Enrollment, (enrollment) => enrollment.course)
   enrollments!: Enrollment[];
+
+  @Column("int", { default: 0 })
+  lessonsCount!: number
+
+  @Column("int", { default: 0 })
+  projectsCount!: number
+
+  @Column("int", { default: 0 })
+  exercisesCount!: number
+
+  @Column({ default: false })
+  certificateIncluded!: boolean
+
+  @Column({ default: "English" })
+  language!: string
+
+  @Column("text", { nullable: true })
+  about!: string // long description
+
+  @Column("simple-array", { nullable: true })
+  whatYouWillLearn!: string[] // list of bullet points
+
+  @Column("simple-array", { nullable: true })
+  requirements!: string[] // list of requirements
+
+  @OneToMany(() => Review, (review) => review.course, { cascade: true, nullable: true })
+  reviews!: Review[]
 
   @CreateDateColumn()
   createdAt!: Date;

@@ -10,6 +10,7 @@ import { excludePassword } from "../utils/excludePassword";
 import { uploadToCloud } from "../services/cloudinary";
 import { Organization } from "../database/models/OrganizationModel";
 import { Enrollment } from "../database/models/EnrollmentModel";
+import { Category } from "../database/models/CategoryModel";
 
 export const createCourse = async (req: Request, res: Response) => {
   const courseRepo = AppDataSource.getRepository(Course);
@@ -18,6 +19,7 @@ export const createCourse = async (req: Request, res: Response) => {
   const assessmentRepo = AppDataSource.getRepository(Assessment);
   const questionRepo = AppDataSource.getRepository(AssessmentQuestion);
   const userRepo = AppDataSource.getRepository(Users);
+  const categoryRepo = AppDataSource.getRepository(Category);
 
   const {
     title,
@@ -30,7 +32,13 @@ export const createCourse = async (req: Request, res: Response) => {
     tags,
     instructorId,
     organizationId,
-    modules, // array of modules with lessons & assessments
+    modules,
+    categoryName,
+    certificateIncluded,
+    language,
+    about,
+    whatYouWillLearn,
+    requirements
   } = req.body;
 
   try {
@@ -40,6 +48,13 @@ export const createCourse = async (req: Request, res: Response) => {
         }
     const organization = await userRepo.findOneBy({ id: Number(organizationId) });
     if (!organization) return res.status(400).json({ message: "Organization not found" });
+
+    let category = await categoryRepo.findOneBy({ name: categoryName });
+    if (!category) {
+      const cat = categoryRepo.create({ name: categoryName });
+      await categoryRepo.save(cat);
+      category = cat;
+    };
 
     const course = courseRepo.create({
       title,
@@ -52,9 +67,19 @@ export const createCourse = async (req: Request, res: Response) => {
       tags,
       instructor,
       organization,
+      category,
+      certificateIncluded,
+      language,
+      about: about,
+      whatYouWillLearn,
+      requirements,
     });
 
     await courseRepo.save(course);
+
+    let totalLessons = 0;
+    let totalProjects = 0;
+    let totalExercises = 0;
 
     if (modules && modules.length > 0) {
       for (const mod of modules) {
@@ -75,7 +100,14 @@ export const createCourse = async (req: Request, res: Response) => {
               duration: les.duration,
               order: les.order,
               module: newModule,
+              isProject: !!les.isProject,
+              isExercise: !!les.isExercise,
             });
+            totalLessons++;
+
+            if (les.isProject) totalProjects++;
+            if (les.isExercise) totalExercises++;
+
             await lessonRepo.save(newLesson);
 
             if (les.assessments && les.assessments.length > 0) {
@@ -110,6 +142,12 @@ export const createCourse = async (req: Request, res: Response) => {
         }
       }
     }
+
+    course.lessonsCount = totalLessons;
+    course.projectsCount = totalProjects;
+    course.exercisesCount = totalExercises; 
+    await courseRepo.save(course);
+
 
     res.status(201).json({ message: "Course created successfully", courseId: course.id });
   } catch (err) {
@@ -150,7 +188,7 @@ export const getCourseById = async (req: Request, res: Response) => {
     try {
       const course = await courseRepo.findOne({
         where: { id },
-        relations: ["instructor", "organization", "modules", "modules.lessons", "modules.lessons.assessments", "modules.lessons.assessments.questions"],
+        relations: ["instructor", "category", "organization", "modules", "modules.lessons", "modules.lessons.assessments", "modules.lessons.assessments.questions"],
       });
 
       if (!course) return res.status(404).json({ message: "Course not found" });
@@ -174,7 +212,7 @@ export const getCourseById = async (req: Request, res: Response) => {
   try {
     const courses = await courseRepo.find({
       where: { instructor: { id: Number(instructorId) } },
-      relations: ["instructor", "organization", "modules", "modules.lessons", "modules.lessons.assessments", "modules.lessons.assessments.questions"],
+      relations: ["instructor", "category", "organization", "modules", "modules.lessons", "modules.lessons.assessments", "modules.lessons.assessments.questions"],
       order: { createdAt: "DESC" },
     });
 
@@ -215,7 +253,7 @@ export const getCourseById = async (req: Request, res: Response) => {
 
       const courses = await courseRepo.find({
         where: { organization: { id: Number(orgId) } },
-        relations: ["instructor", "organization", "modules", "modules.lessons", "modules.lessons.assessments", "modules.lessons.assessments.questions"],
+        relations: ["instructor", "category", "organization", "modules", "modules.lessons", "modules.lessons.assessments", "modules.lessons.assessments.questions"],
         order: { createdAt: "DESC" },
       });
 
@@ -245,10 +283,11 @@ export const getCourseById = async (req: Request, res: Response) => {
   const questionRepo = AppDataSource.getRepository(AssessmentQuestion);
   const userRepo = AppDataSource.getRepository(Users);
   const organizationRepo = AppDataSource.getRepository(Organization);
+  const categoryRepo = AppDataSource.getRepository(Category);
 
 
   const { id } = req.params;
-  const { title, description, thumbnail, level, price, isPublished, duration, tags, instructorId, organizationId, modules } = req.body;
+  const { title, description, thumbnail, level, price, isPublished, duration, tags, instructorId, organizationId, categoryName, modules } = req.body;
 
   try {
     const course = await courseRepo.findOne({
@@ -266,6 +305,13 @@ export const getCourseById = async (req: Request, res: Response) => {
     const organization = organizationId ? await organizationRepo.findOneBy({ id: Number(organizationId) }) : null;
     if (organizationId && !organization) return res.status(400).json({ message: "Organization not found" });
 
+    let category = await categoryRepo.findOneBy({ name: categoryName });
+    if (categoryName && !category) {
+      category = categoryRepo.create({ name: categoryName });
+      await categoryRepo.save(category);
+    };
+
+
     // Update course fields
     course.title = title ?? course.title;
     course.description = description ?? course.description;
@@ -277,6 +323,7 @@ export const getCourseById = async (req: Request, res: Response) => {
     course.tags = tags ?? course.tags;
     course.instructor = instructor;
     if (organization) course.organization = organization;
+    if (category) course.category = category;
 
     await courseRepo.save(course);
 
@@ -392,7 +439,7 @@ export const getCoursesWithEnrollmentStatus = async (req: Request, res: Response
 
   try {
     const courses = await courseRepo.find({
-      relations: ["instructor", "organization", "modules"],
+      relations: ["instructor", "organization", "modules", "category"],
       order: { createdAt: "DESC" },
     });
 

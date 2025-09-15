@@ -28,6 +28,13 @@ export class Lesson {
   @OneToMany(() => Assessment, (assessment) => assessment.lesson)
   assessments!: Assessment[];
 
+  @Column({ default: false })
+  isProject!: boolean;
+
+  @Column({ default: false })
+  isExercise!: boolean;
+
+
   @CreateDateColumn()
   createdAt!: Date;
 

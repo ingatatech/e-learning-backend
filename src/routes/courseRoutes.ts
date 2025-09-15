@@ -55,6 +55,25 @@ import { upload } from "../middleware/multer";
  *                 type: string
  *                 nullable: true
  *                 example: "1"
+ *               certificateIncluded:
+ *                 type: boolean
+ *                 example: true
+ *               language:
+ *                 type: string
+ *                 example: "English"
+ *               about:
+ *                 type: string
+ *                 example: "This course covers the fundamentals of TypeScript..."
+ *               whatYouWillLearn:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["Understand TypeScript basics", "Work with interfaces", "Use generics effectively"]
+ *               requirements:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["Basic JavaScript knowledge", "Node.js installed"]
  *               modules:
  *                 type: array
  *                 items:
@@ -89,6 +108,12 @@ import { upload } from "../middleware/multer";
  *                           order:
  *                             type: number
  *                             example: 1
+ *                           isProject:
+ *                             type: boolean
+ *                             example: false
+ *                           isExercise:
+ *                             type: boolean
+ *                             example: false
  *                           assessments:
  *                             type: array
  *                             items:

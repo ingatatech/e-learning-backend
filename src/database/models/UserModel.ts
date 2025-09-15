@@ -4,6 +4,7 @@ import { Organization } from "./OrganizationModel";
 import { Notification } from "./NotificationsModel";
 import { Course } from "./CourseModel";
 import { Enrollment } from "./EnrollmentModel";
+import { Review } from "./ReviewModel";
 
 @Entity()
 export class Users {
@@ -80,6 +81,9 @@ export class Users {
 
   @Column("simple-json", { nullable: true })
   notificationSettings?: Record<string, any>;
+
+  @OneToMany(() => Review, (review) => review.user)
+  reviews!: Review[]
 
   @CreateDateColumn()
   createdAt!: Date;
