@@ -5,6 +5,7 @@ import { Notification } from "./NotificationsModel";
 import { Course } from "./CourseModel";
 import { Enrollment } from "./EnrollmentModel";
 import { Review } from "./ReviewModel";
+import { Progress } from "./ProgressModel";
 
 @Entity()
 export class Users {
@@ -84,6 +85,9 @@ export class Users {
 
   @OneToMany(() => Review, (review) => review.user)
   reviews!: Review[]
+
+  @OneToMany(() => Progress, (progress) => progress.user)
+  progress!: Progress[]
 
   @CreateDateColumn()
   createdAt!: Date;

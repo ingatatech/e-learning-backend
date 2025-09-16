@@ -5,6 +5,7 @@ import { Module } from "./ModuleModel";
 import { Enrollment } from "./EnrollmentModel";
 import { Category } from "./CategoryModel";
 import { Review } from "./ReviewModel";
+import { Progress } from "./ProgressModel";
 
 export enum CourseLevel {
   BEGINNER = "beginner",
@@ -88,6 +89,9 @@ export class Course {
 
   @OneToMany(() => Review, (review) => review.course, { cascade: true, nullable: true })
   reviews!: Review[]
+
+  @OneToMany(() => Progress, (progress) => progress.user)
+  progress!: Progress[]
 
   @CreateDateColumn()
   createdAt!: Date;
