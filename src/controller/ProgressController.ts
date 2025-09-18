@@ -6,6 +6,7 @@ import { Course } from "../database/models/CourseModel"
 import { Assessment } from "../database/models/AssessmentModel"
 import { Lesson } from "../database/models/LessonModel"
 import { excludePassword } from "../utils/excludePassword"
+import { Enrollment } from "../database/models/EnrollmentModel"
 
 const progressRepo = AppDataSource.getRepository(Progress)
 const userRepo = AppDataSource.getRepository(Users)
@@ -52,9 +53,10 @@ export const getUserProgress = async (req: Request, res: Response) => {
 
 export const completeStep = async (req: Request, res: Response) => {
   try {
-    const { courseId, userId, lessonId, assessmentId, score } = req.body
+    const { courseId, userId, lessonId, assessmentId, score, status } = req.body
 
     const progressRepo = AppDataSource.getRepository(Progress)
+    const enrollmentRepo = AppDataSource.getRepository(Enrollment)
 
     let progress = await progressRepo.findOne({
       where: {
@@ -81,6 +83,19 @@ export const completeStep = async (req: Request, res: Response) => {
     }
 
     await progressRepo.save(progress)
+
+    // Update enrollment status to "in_progress" if it's still "not_started"
+    const enrollment = await enrollmentRepo.findOne({
+      where: {
+        user: { id: userId },
+        course: { id: courseId },
+      },
+    })
+
+    if (enrollment && enrollment.status !== "in_progress" && enrollment.status !== "completed") {
+      enrollment.status = status || "in_progress"
+      await enrollmentRepo.save(enrollment)
+    }
 
     return res.json({ success: true, progress })
   } catch (err) {

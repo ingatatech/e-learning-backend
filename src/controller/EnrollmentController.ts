@@ -30,7 +30,7 @@ export const enrollInCourse = async (req: Request, res: Response) => {
     const enrollment = enrollmentRepo.create({
       user,
       course,
-      status: "active",
+      status: "not_started",
       progress: 0,
     });
 
@@ -70,11 +70,12 @@ export const getUserEnrollments = async (req: Request, res: Response) => {
 
     // sanitize instructor info
     const sanitized = enrollments.map((enrollment) => ({
-      courseId: enrollment.course.id,
-      courseTitle: enrollment.course.title,
-      thumbnail: enrollment.course.thumbnail,
       status: enrollment.status,
       progress: enrollment.progress,
+      student: excludePassword(enrollment.user),
+      enrolledAt: enrollment.enrolledAt,
+      updateAt: enrollment.updatedAt,
+      course: enrollment.course,
       instructor: excludePassword(enrollment.course.instructor),
     }));
 
