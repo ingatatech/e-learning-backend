@@ -53,7 +53,7 @@ export const getUserProgress = async (req: Request, res: Response) => {
 
 export const completeStep = async (req: Request, res: Response) => {
   try {
-    const { courseId, userId, lessonId, assessmentId, score, status } = req.body
+    const { courseId, userId, lessonId, assessmentId, score, status, isCompleted=true } = req.body
 
     const progressRepo = AppDataSource.getRepository(Progress)
     const enrollmentRepo = AppDataSource.getRepository(Enrollment)
@@ -74,11 +74,11 @@ export const completeStep = async (req: Request, res: Response) => {
         course: { id: courseId } as Course,
         lesson: lessonId ? ({ id: lessonId } as Lesson) : undefined,
         assessment: assessmentId ? ({ id: assessmentId } as Assessment) : undefined,
-        isCompleted: true,
+        isCompleted: !!req.body.isCompleted,
         score,
       })
     } else {
-      progress.isCompleted = true
+      if (req.body.ready) progress.isCompleted = true
       if (score !== undefined) progress.score = score
     }
 
