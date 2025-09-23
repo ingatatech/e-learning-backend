@@ -21,11 +21,12 @@ export const getUserProgress = async (req: Request, res: Response) => {
     const progressRows = await progressRepo.find({
       where: { user: { id: Number(userId) }, course: { id: courseId } },
       relations: ["lesson", "assessment", "user", "course"],
-      order: { completedAt: "ASC" }, // optional, keeps chronological order
+      order: { completedAt: "ASC" }, 
     })
 
     // Map to completedSteps
     const completedSteps = progressRows.map((row) => ({
+      dbId: row.id,
       lessonId: row.lessonId || null,
       assessmentId: row.assessmentId || null,
       isCompleted: row.isCompleted,

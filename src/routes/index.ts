@@ -6,6 +6,7 @@ import organizationRoutes from './organizationRoutes'
 import courseRoutes from './courseRoutes'
 import enrollmentRoutes from './enrollmentRoutes'
 import progressRoutes from './progressRoutes'
+import answerRoutes from './answerRoutes'
 
 const router = Router();
 
@@ -15,5 +16,6 @@ router.use("/organizations", organizationRoutes);
 router.use("/courses", courseRoutes);
 router.use("/enrollments", enrollmentRoutes);
 router.use("/progress", progressRoutes)
+router.use("/answers", answerRoutes)
 
 export default router;
