@@ -59,7 +59,7 @@ const emailContent = `
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to EduPlatform</title>
+  <title>Welcome to Ingata E-learning</title>
 </head>
 <body style="margin: 0; padding: 20px; background-color: #f5f5f5; font-family: Arial, Helvetica, sans-serif; line-height: 1.6;">
   <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px 30px; border-radius: 8px;">
@@ -67,7 +67,7 @@ const emailContent = `
     <!-- Header -->
     <div style="text-align: center; margin-bottom: 30px;">
       <div style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 8px;">
-        🎓 EduPlatform
+        🎓 Ingata E-learning
       </div>
       <div style="font-size: 14px; color: #666;">
         Your Gateway to Digital Learning
@@ -81,7 +81,7 @@ const emailContent = `
       </h1>
       
       <p style="color: #666; margin-bottom: 25px;">
-        Your EduPlatform account is now active. Here are your login details:
+        Your Ingata E-learning account is now active. Here are your login details:
       </p>
 
       <!-- Credentials -->
@@ -117,10 +117,10 @@ const emailContent = `
     <!-- Footer -->
     <div style="text-align: center; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 14px;">
       <div style="margin-bottom: 10px;">
-        Need help? <a href="mailto:support@eduplatform.com" style="color: #007bff;">Contact support</a>
+        Need help? <a href="mailto:support@ingatatechnologies.com" style="color: #007bff;">Contact support</a>
       </div>
       <div>
-        © ${new Date().getFullYear()} EduPlatform. Sent to ${req.session.firstname} ${req.session.lastname}
+        © ${new Date().getFullYear()} Ingata E-learning. Sent to ${req.session.firstname} ${req.session.lastname}
       </div>
     </div>
   </div>
@@ -176,7 +176,7 @@ const html = `
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EduPlatform - Your Security Code</title>
+  <title>Ingata E-learning - Your Security Code</title>
 </head>
 <body style="margin: 0; padding: 20px; background-color: #f5f5f5; font-family: Arial, Helvetica, sans-serif; line-height: 1.6;">
   <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px 30px; border-radius: 8px;">
@@ -184,7 +184,7 @@ const html = `
     <!-- Header -->
     <div style="text-align: center; margin-bottom: 30px;">
       <div style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 8px;">
-        🛡️ EduPlatform
+        🛡️ Ingata E-learning
       </div>
       <div style="font-size: 14px; color: #666;">
         Secure Learning Access
@@ -221,10 +221,10 @@ const html = `
     <!-- Footer -->
     <div style="text-align: center; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 14px;">
       <div style="margin-bottom: 10px;">
-        Need help? <a href="mailto:support@eduplatform.com" style="color: #007bff;">Contact support</a>
+        Need help? <a href="mailto:support@ingatatechnologies.com" style="color: #007bff;">Contact support</a>
       </div>
       <div>
-        © ${new Date().getFullYear()} EduPlatform. Sent to ${firstName} ${lastName}
+        © ${new Date().getFullYear()} Ingata E-learning. Sent to ${firstName} ${lastName}
       </div>
     </div>
   </div>
@@ -286,7 +286,7 @@ const htmlContent = `
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EduPlatform - Password Reset Request</title>
+  <title>Ingata E-learning - Password Reset Request</title>
 </head>
 <body style="margin: 0; padding: 20px; background-color: #f5f5f5; font-family: Arial, Helvetica, sans-serif; line-height: 1.6;">
   <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px 30px; border-radius: 8px;">
@@ -294,7 +294,7 @@ const htmlContent = `
     <!-- Header -->
     <div style="text-align: center; margin-bottom: 30px;">
       <div style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 8px;">
-        🔐 EduPlatform
+        🔐 Ingata E-learning
       </div>
       <div style="font-size: 14px; color: #666;">
         Password Reset Request
@@ -339,15 +339,15 @@ const htmlContent = `
       <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
         Need help? Contact our support team
       </div>
-      <a href="mailto:support@eduplatform.com" style="color: #007bff; text-decoration: none; font-weight: bold;">
-        support@eduplatform.com
+      <a href="mailto:support@ingatatechnologies.com" style="color: #007bff; text-decoration: none; font-weight: bold;">
+        support@ingatatechnologies.com
       </a>
     </div>
 
     <!-- Footer -->
     <div style="text-align: center; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 14px;">
       <div>
-        © ${new Date().getFullYear()} EduPlatform. This email was sent in response to a password reset request.
+        © ${new Date().getFullYear()} Ingata E-learning. This email was sent in response to a password reset request.
       </div>
     </div>
   </div>
