@@ -11,6 +11,11 @@ import { uploadToCloud } from "../services/cloudinary";
 import { Organization } from "../database/models/OrganizationModel";
 import { Enrollment } from "../database/models/EnrollmentModel";
 import { Category } from "../database/models/CategoryModel";
+import { logActivity } from "../middleware/ActivityLog";
+
+export interface CustomRequest extends Request {
+  user?: Users; 
+}
 
 export const createCourse = async (req: Request, res: Response) => {
   const courseRepo = AppDataSource.getRepository(Course);
@@ -148,6 +153,14 @@ export const createCourse = async (req: Request, res: Response) => {
     course.exercisesCount = totalExercises; 
     await courseRepo.save(course);
 
+     // Save this log in the activity log
+    await logActivity({
+      userId: instructor.id,
+      action: "Created a course",
+      targetId: String(course.id),
+      targetType: "Course",
+      details: `Created a course: ${course.title}`,
+    }); 
 
     res.status(201).json({ message: "Course created successfully", courseId: course.id });
   } catch (err) {
@@ -405,6 +418,15 @@ export const getCourseById = async (req: Request, res: Response) => {
       }
     }
 
+     // Save this log in the activity log
+    await logActivity({
+      userId: instructorId,
+      action: "Updated a course",
+      targetId: String(course.id),
+      targetType: "Course",
+      details: `Updated a course: ${course.title}`,
+    }); 
+
     res.status(200).json({ message: "Course updated successfully" });
   } catch (err) {
     console.error(err);
@@ -413,7 +435,7 @@ export const getCourseById = async (req: Request, res: Response) => {
 };
 
 
-export const deleteCourse = async (req: Request, res: Response) => {
+export const deleteCourse = async (req: CustomRequest, res: Response) => {
   const courseRepo = AppDataSource.getRepository(Course);
   const { id } = req.params;
 
@@ -422,6 +444,15 @@ export const deleteCourse = async (req: Request, res: Response) => {
     if (!course) return res.status(404).json({ message: "Course not found" });
 
     await courseRepo.remove(course);
+    
+     // Save this log in the activity log
+    await logActivity({
+      userId: req.user!.id,
+      action: "Deleted a course",
+      targetId: String(course.id),
+      targetType: "Course",
+      details: `Deleted a course: ${course.title}`,
+    }); 
     res.status(200).json({ message: "Course deleted successfully" });
   } catch (err) {
     console.error(err);
@@ -460,6 +491,31 @@ export const getCoursesWithEnrollmentStatus = async (req: Request, res: Response
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to fetch courses" });
+  }
+};
+
+
+export const getStudentsByCourse = async (req: Request, res: Response) => {
+  try {
+    const { courseId } = req.params;
+    if (!courseId) return res.status(400).json({ error: "Missing courseId" });
+
+    const enrollmentRepo = AppDataSource.getRepository(Enrollment);
+
+    const enrollments = await enrollmentRepo.find({
+      where: { course: { id: courseId } },
+      relations: ["user"],
+    });
+
+    const students = enrollments.map((enroll) => enroll.user);
+
+    // Remove duplicates (in case the same user appears twice)
+    const uniqueStudents = Array.from(new Map(students.map(s => [s.id, s])).values());
+
+    return res.json({ success: true, students: uniqueStudents });
+  } catch (err) {
+    console.error("Failed to fetch students:", err);
+    return res.status(500).json({ error: "Failed to fetch students" });
   }
 };
 
