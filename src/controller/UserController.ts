@@ -487,6 +487,43 @@ static async getUserById(req: Request, res: Response): Promise<void> {
   }
 }
 
+static async getUsersByOrg(req: Request, res: Response): Promise<void> {
+  try {
+    const organizationId = Number(req.params.organizationId);
+    const userRepository = AppDataSource.getRepository(Users);
+    const users = await userRepository.find({
+      where: { organization: { id: organizationId } },
+      relations: ["organization"],
+    });
+
+    // exclude admin
+    const admin = users.find(user => user.role === "admin");
+    if (admin) {
+      users.splice(users.indexOf(admin), 1);
+    }
+
+    res.status(200).json({
+      message: "Users fetched successfully",
+      users: users.map(user => ({
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+        profilePicUrl: user.profilePicUrl || null,
+        organization: user.organization ?? null,
+        createdAt: user.createdAt
+      })),
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error fetching users",
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
   static async updateUser(req: CustomRequest, res: Response): Promise<void> {
     try {
         const userRepository = AppDataSource.getRepository(Users);

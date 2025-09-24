@@ -108,6 +108,9 @@ router.post("/add", UserClassController.addUser.bind(UserClassController));
 router.get("/all", authenticateToken, UserClassController.getUsers.bind(UserClassController));
 
 
+router.get("/all/org/:organizationId", authenticateToken, UserClassController.getUsersByOrg.bind(UserClassController));
+
+
 /**
  * @swagger
  * /auth/get/{id}:
