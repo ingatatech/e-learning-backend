@@ -1,7 +1,7 @@
 
 import { Router } from "express";
 import { authenticateToken } from "../middleware/JwtParsing";
-import { createCourse, deleteCourse, getCourseById, getCoursesByInstructor, getCoursesByOrganization, getCoursesWithEnrollmentStatus, getStudentsByCourse, updateCourse, uploadCourseThumbnail } from "../controller/CourseController";
+import { createCourse, deleteCourse, getCourseById, getCoursesByInstructor, getCoursesByOrganization, getCoursesWithEnrollmentStatus, getStudentsByCourse, getStudentsByInstructor, updateCourse, uploadCourseThumbnail } from "../controller/CourseController";
 import { hasRole } from "../middleware/RoleMiddleware";
 const router = Router();
 import { upload } from "../middleware/multer";
@@ -306,6 +306,9 @@ router.get("/get/:id", authenticateToken, getCourseById);
 
 
 router.get("/get/:id/students", authenticateToken, getStudentsByCourse);
+
+
+router.get("/instructor/:instructorId/students/", authenticateToken, getStudentsByInstructor);
 
 
 /**

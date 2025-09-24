@@ -75,7 +75,7 @@ export const completeStep = async (req: Request, res: Response) => {
         course: { id: courseId } as Course,
         lesson: lessonId ? ({ id: lessonId } as Lesson) : undefined,
         assessment: assessmentId ? ({ id: assessmentId } as Assessment) : undefined,
-        isCompleted: !!req.body.isCompleted,
+        isCompleted: isCompleted,
         score,
       })
     } else {

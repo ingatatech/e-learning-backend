@@ -12,6 +12,7 @@ import { Organization } from "../database/models/OrganizationModel";
 import { Enrollment } from "../database/models/EnrollmentModel";
 import { Category } from "../database/models/CategoryModel";
 import { logActivity } from "../middleware/ActivityLog";
+import { In } from "typeorm";
 
 export interface CustomRequest extends Request {
   user?: Users; 
@@ -518,6 +519,52 @@ export const getStudentsByCourse = async (req: Request, res: Response) => {
     return res.status(500).json({ error: "Failed to fetch students" });
   }
 };
+
+export const getStudentsByInstructor = async (req: Request, res: Response) => {
+  try {
+    const { instructorId } = req.params;
+    if (!instructorId) {
+      return res.status(400).json({ error: "Missing instructorId" });
+    }
+
+    const courseRepo = AppDataSource.getRepository(Course);
+    const enrollmentRepo = AppDataSource.getRepository(Enrollment);
+
+    // Get instructor's courses
+    const courses = await courseRepo.find({
+      where: { instructor: { id: Number(instructorId) } },
+      select: ["id"], // we just need course IDs
+    });
+
+    if (!courses.length) {
+      return res.status(404).json({ message: "No courses found for this instructor" });
+    }
+
+    const courseIds = courses.map(c => c.id);
+
+    // Get all enrollments for these courses
+    const enrollments = await enrollmentRepo.find({
+      where: { course: { id: In(courseIds) } },
+      relations: ["user"],
+    });
+
+    const students = enrollments.map(enroll => enroll.user);
+
+    // Deduplicate by user id
+    const uniqueStudents = Array.from(new Map(students.map(s => [s.id, s])).values());
+
+    return res.json({
+      success: true,
+      instructorId,
+      studentCount: uniqueStudents.length,
+      students: uniqueStudents,
+    });
+  } catch (err) {
+    console.error("Failed to fetch students by instructor:", err);
+    return res.status(500).json({ error: "Failed to fetch students" });
+  }
+};
+
 
 
 
