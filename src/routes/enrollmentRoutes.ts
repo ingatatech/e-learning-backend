@@ -1,6 +1,6 @@
 // routes/enrollmentRoutes.ts
 import { Router } from "express";
-import { enrollInCourse, getUserEnrollments } from "../controller/EnrollmentController";
+import { enrollInCourse, enrollMultipleStudents, getUserEnrollments, removeStudentsFromCourse } from "../controller/EnrollmentController";
 
 const router = Router();
 
@@ -90,6 +90,11 @@ const router = Router();
  *                   example: Failed to enroll user
  */
 router.post("/enroll", enrollInCourse);
+
+router.post("/enrollMultiple", enrollMultipleStudents);
+
+
+router.post("/remove", removeStudentsFromCourse);
 
 
 /**

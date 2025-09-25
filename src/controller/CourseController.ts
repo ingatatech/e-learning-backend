@@ -13,6 +13,7 @@ import { Enrollment } from "../database/models/EnrollmentModel";
 import { Category } from "../database/models/CategoryModel";
 import { logActivity } from "../middleware/ActivityLog";
 import { In } from "typeorm";
+import { profile } from "console";
 
 export interface CustomRequest extends Request {
   user?: Users; 
@@ -496,29 +497,30 @@ export const getCoursesWithEnrollmentStatus = async (req: Request, res: Response
 };
 
 
-export const getStudentsByCourse = async (req: Request, res: Response) => {
-  try {
-    const { courseId } = req.params;
-    if (!courseId) return res.status(400).json({ error: "Missing courseId" });
-
-    const enrollmentRepo = AppDataSource.getRepository(Enrollment);
-
-    const enrollments = await enrollmentRepo.find({
-      where: { course: { id: courseId } },
-      relations: ["user"],
-    });
-
-    const students = enrollments.map((enroll) => enroll.user);
-
-    // Remove duplicates (in case the same user appears twice)
-    const uniqueStudents = Array.from(new Map(students.map(s => [s.id, s])).values());
-
-    return res.json({ success: true, students: uniqueStudents });
-  } catch (err) {
-    console.error("Failed to fetch students:", err);
-    return res.status(500).json({ error: "Failed to fetch students" });
-  }
-};
+export const getStudentsByCourse = async (req: Request, res: Response) => { 
+  try { 
+    const { courseId } = req.params; 
+    if (!courseId) return res.status(400).json({ error: "Missing courseId" }); 
+    const enrollmentRepo = AppDataSource.getRepository(Enrollment); 
+    const enrollments = await enrollmentRepo.find({ where: { course: { id: courseId } }, relations: ["user"], }); 
+    const students = enrollments.map((enroll) => enroll.user); // Remove duplicates (in case the same user appears twice) 
+    const uniqueStudents = Array.from(new Map(students.map(s => [s.id, s])).values()); 
+    const sanitize = uniqueStudents.map((student) => ({ 
+      id: student.id, 
+      firstName: student.firstName, 
+      lastName: student.lastName, 
+      email: student.email, 
+      role: student.role, 
+      createdAt: student.createdAt, 
+      updatedAt: student.updatedAt, 
+      profilePicture: student.profilePicUrl, 
+      disabled: student.disabled 
+    })); 
+    return res.json({ success: true, students: sanitize });
+  } catch (err) { 
+    console.error("Failed to fetch students:", err); 
+    return res.status(500).json({ error: "Failed to fetch students" }); 
+  } };
 
 export const getStudentsByInstructor = async (req: Request, res: Response) => {
   try {

@@ -305,7 +305,7 @@ router.post("/upload-thumbnail", upload.single("thumbnail"), uploadCourseThumbna
 router.get("/get/:id", authenticateToken, getCourseById);
 
 
-router.get("/get/:id/students", authenticateToken, getStudentsByCourse);
+router.get("/get/:courseId/students", authenticateToken, getStudentsByCourse);
 
 
 router.get("/instructor/:instructorId/students/", authenticateToken, getStudentsByInstructor);

@@ -15,6 +15,12 @@ declare module 'express-session' {
   }
 }
 
+interface CourseInfo {
+  title: string;
+  instructorName: string;
+  startUrl?: string;
+}
+
 // Load environment variables from .env file
 dotenv.config();
 
@@ -252,18 +258,6 @@ const html = `
 };
 
 
-// Function to invalidate OTP for a specific email
-export const invalidateOtp = (req: Request, email: string): void => {
-  if (req.session.otpEmail === email) {
-    delete req.session.otp;
-    delete req.session.otpEmail;
-    delete req.session.otpExpiry;
-    console.log(`OTP invalidated for email: ${email}`); // Add logging
-  } else {
-    console.log(`Email in session (${req.session.otpEmail}) does not match provided email (${email}). OTP not invalidated.`);
-  }
-};
-
 export const sendResetPasswordEmail = async (email: string, resetToken: string, frontendBaseUrl: string) => {
   if (!process.env.GMAIL_USER || !process.env.GMAIL_PASSWORD) {
     console.error("Missing GMAIL creds");
@@ -364,3 +358,89 @@ const htmlContent = `
 };
 
 
+export const sendEnrollmentEmail = async (
+  email: string,
+  lastName: string,
+  firstName: string,
+  courses: CourseInfo[],
+  req: Request
+): Promise<boolean> => {
+  console.log(email, firstName, lastName, courses);
+  try {
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_PASSWORD) {
+      console.error("GMAIL_USER or GMAIL_PASSWORD not defined in environment variables.");
+      return false;
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_PASSWORD,
+      },
+    });
+
+    const coursesHtml = courses.map(c => `
+      <li style="margin-bottom: 10px;">
+        <strong>${c.title}</strong> - Instructor: ${c.instructorName}
+        ${c.startUrl ? `<br><a href="${c.startUrl}" style="color: #007bff;">Start Course</a>` : ""}
+      </li>
+    `).join("");
+
+    const emailContent = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head><meta charset="UTF-8"><title>Course Enrollment</title></head>
+      <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #fff; padding: 30px; border-radius: 8px;">
+          <h2 style="color: #333;">Hello ${firstName} ${lastName},</h2>
+          <p>You have been enrolled in the following course${courses.length > 1 ? "s" : ""}:</p>
+          <ul style="padding-left: 20px;">${coursesHtml}</ul>
+          <p>Log in to your account to start learning and track your progress.</p>
+          <div style="text-align: center; margin-top: 20px;">
+            <a href="${process.env.FRONTEND_URL}/student" style="background-color: #007bff; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">Go to Dashboard</a>
+          </div>
+          <p style="margin-top: 20px; font-size: 12px; color: #666;">Sent to ${firstName} ${lastName} (${email})</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const mailOptions = {
+      from: process.env.GMAIL_USER,
+      to: email,
+      subject: `You have been enrolled in a course`,
+      html: emailContent,
+    };
+
+    return new Promise<boolean>((resolve, reject) => {
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error('Error sending enrollment email:', error);
+          reject(false);
+        } else {
+          console.log(`Enrollment email sent to ${email}: ${info.response}`);
+          resolve(true);
+        }
+      });
+    });
+  } catch (error) {
+    console.error('Error sending enrollment email:', error);
+    return false;
+  }
+};
+
+
+
+
+// Function to invalidate OTP for a specific email
+export const invalidateOtp = (req: Request, email: string): void => {
+  if (req.session.otpEmail === email) {
+    delete req.session.otp;
+    delete req.session.otpEmail;
+    delete req.session.otpExpiry;
+    console.log(`OTP invalidated for email: ${email}`); // Add logging
+  } else {
+    console.log(`Email in session (${req.session.otpEmail}) does not match provided email (${email}). OTP not invalidated.`);
+  }
+};

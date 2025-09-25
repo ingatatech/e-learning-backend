@@ -5,6 +5,8 @@ import { Enrollment } from "../database/models/EnrollmentModel";
 import { Users } from "../database/models/UserModel";
 import { Course } from "../database/models/CourseModel";
 import { excludePassword } from "../utils/excludePassword";
+import { getOrCreateUser } from "../utils/createUser";
+import { sendCreds, sendEnrollmentEmail } from "../services/SessionOtp";
 
 export const enrollInCourse = async (req: Request, res: Response) => {
   const { userId, courseId } = req.body;
@@ -51,6 +53,88 @@ export const enrollInCourse = async (req: Request, res: Response) => {
   }
 };
 
+
+export const enrollMultipleStudents = async (req: Request, res: Response) => {
+  const { students, courseId } = req.body; 
+
+  try {
+    const courseRepo = AppDataSource.getRepository(Course);
+    const enrollmentRepo = AppDataSource.getRepository(Enrollment);
+    const userRepo = AppDataSource.getRepository(Users);
+
+    const course = await courseRepo.findOne({ where: { id: courseId }, relations: ["instructor"] });
+    if (!course) return res.status(404).json({ message: "Course not found" });
+
+    let enrollments: Enrollment[] = [];
+    let createdUsers: Users[] = [];
+    let skipped: string[] = [];
+
+    for (const student of students) {
+      let user = await userRepo.findOne({ where: { email: student.email } });
+
+      if (!user) {
+        // Create new user
+        user = await getOrCreateUser({
+          firstName: student.firstName,
+          lastName: student.lastName,
+          email: student.email,
+          role: student.role || "student",
+          organizationId: student.organizationId,
+          req,
+        });
+        await userRepo.save(user);
+        createdUsers.push(user);
+
+      }
+
+      // Check if already enrolled
+      const existing = await enrollmentRepo.findOne({
+        where: { user: { id: user.id }, course: { id: course.id } },
+      });
+      if (existing) {
+        skipped.push(user.email);
+        continue;
+      }
+
+      // Create enrollment
+      const enrollment = enrollmentRepo.create({
+        user,
+        course,
+        status: "not_started",
+        progress: 0,
+      });
+      await enrollmentRepo.save(enrollment);
+      enrollments.push(enrollment);
+
+      // Send enrollment notification
+      await sendEnrollmentEmail(
+        user.email,
+        user.lastName,
+        user.firstName,
+        [{ title: course.title, instructorName: `${course.instructor?.firstName || ""} ${course.instructor?.lastName || ""}`, startUrl: `${process.env.FRONTEND_URL}/courses/${course.id}/learn` }],
+        req
+      );
+    }
+
+    // Update enrollment count
+    course.enrollmentCount = (course.enrollmentCount || 0) + enrollments.length;
+    await courseRepo.save(course);
+
+    return res.status(201).json({
+      message: "Batch enrollment complete",
+      totalAdded: enrollments.length,
+      totalCreatedUsers: createdUsers.length,
+      skippedAlreadyEnrolled: skipped,
+      enrollmentCount: course.enrollmentCount,
+    });
+  } catch (err) {
+    console.error("Batch enrollment error:", err);
+    return res.status(500).json({ message: "Failed to enroll students" });
+  }
+};
+
+
+
 export const getUserEnrollments = async (req: Request, res: Response) => {
   const { userId } = req.body;
   const enrollmentRepo = AppDataSource.getRepository(Enrollment);
@@ -83,6 +167,45 @@ export const getUserEnrollments = async (req: Request, res: Response) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to fetch user enrollments" });
+  }
+};
+
+
+
+export const removeStudentsFromCourse = async (req: Request, res: Response) => {
+  const { studentIds, courseId } = req.body; 
+
+  if (!courseId || !studentIds || !Array.isArray(studentIds) || studentIds.length === 0) {
+    return res.status(400).json({ message: "courseId and studentIds are required" });
+  }
+
+  try {
+    const enrollmentRepo = AppDataSource.getRepository(Enrollment);
+    const courseRepo = AppDataSource.getRepository(Course);
+
+    const course = await courseRepo.findOne({ where: { id: courseId } });
+    if (!course) return res.status(404).json({ message: "Course not found" });
+
+    // Remove enrollments
+    const result = await enrollmentRepo
+      .createQueryBuilder()
+      .delete()
+      .where("courseId = :courseId", { courseId: course.id })
+      .andWhere("userId IN (:...studentIds)", { studentIds })
+      .execute();
+
+    // Update course enrollment count
+    course.enrollmentCount = Math.max((course.enrollmentCount || 0) - studentIds.length, 0);
+    await courseRepo.save(course);
+
+    return res.status(200).json({
+      message: "Students removed from course successfully",
+      removedCount: result.affected || 0,
+      enrollmentCount: course.enrollmentCount,
+    });
+  } catch (err) {
+    console.error("Error removing students:", err);
+    return res.status(500).json({ message: "Failed to remove students" });
   }
 };
 
