@@ -1,7 +1,7 @@
 
 import { Router } from "express";
 import { authenticateToken } from "../middleware/JwtParsing";
-import { createCourse, deleteCourse, getCourseById, getCoursesByInstructor, getCoursesByOrganization, getCoursesWithEnrollmentStatus, getStudentsByCourse, getStudentsByInstructor, updateCourse, uploadCourseThumbnail } from "../controller/CourseController";
+import { createCourse, deleteCourse, getCourseById, getCoursesByInstructor, getCoursesByOrganization, getCoursesWithEnrollmentStatus, getStudentsByCourse, getStudentsByInstructor, updateCourse, uploadCourseThumbnail, uploadLessonImage } from "../controller/CourseController";
 import { hasRole } from "../middleware/RoleMiddleware";
 const router = Router();
 import { upload } from "../middleware/multer";
@@ -114,6 +114,24 @@ import { upload } from "../middleware/multer";
  *                           isExercise:
  *                             type: boolean
  *                             example: false
+ *                           resources:
+ *                             type: array
+ *                             description: "Array of resource objects for the lesson"
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 title:
+ *                                   type: string
+ *                                   description: "Title of the resource"
+ *                                   example: "TypeScript Handbook"
+ *                                 url:
+ *                                   type: string
+ *                                   description: "URL to access the resource"
+ *                                   example: "https://example.com/typescript-handbook.pdf"
+ *                                 description:
+ *                                   type: string
+ *                                   description: "Description of the resource"
+ *                                   example: "Official TypeScript documentation and handbook"
  *                           assessments:
  *                             type: array
  *                             items:
@@ -223,6 +241,9 @@ router.post("/create", authenticateToken, hasRole(['admin', 'sysadmin', 'instruc
  *         description: Internal server error
  */
 router.post("/upload-thumbnail", upload.single("thumbnail"), uploadCourseThumbnail);
+
+
+router.post("/upload-lesson-img", upload.single("lessonImg"), uploadLessonImage);
 
 /**
  * @swagger

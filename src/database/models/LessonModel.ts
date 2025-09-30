@@ -34,6 +34,8 @@ export class Lesson {
   @Column({ default: false })
   isExercise!: boolean;
 
+  @Column({ type: 'json', nullable: true })
+  resources: any;
 
   @CreateDateColumn()
   createdAt!: Date;

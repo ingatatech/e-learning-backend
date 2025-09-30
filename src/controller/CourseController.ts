@@ -7,7 +7,7 @@ import { Assessment } from "../database/models/AssessmentModel";
 import { AssessmentQuestion } from "../database/models/AssessmentQuestionModel";
 import { Users } from "../database/models/UserModel";
 import { excludePassword } from "../utils/excludePassword";
-import { uploadToCloud } from "../services/cloudinary";
+import { uploadLessonImg, uploadToCloud } from "../services/cloudinary";
 import { Organization } from "../database/models/OrganizationModel";
 import { Enrollment } from "../database/models/EnrollmentModel";
 import { Category } from "../database/models/CategoryModel";
@@ -100,6 +100,11 @@ export const createCourse = async (req: Request, res: Response) => {
 
         if (mod.lessons && mod.lessons.length > 0) {
           for (const les of mod.lessons) {
+            // Store resources as JSON in the lesson
+            const resourcesJson = les.resources && les.resources.length > 0 
+              ? JSON.stringify(les.resources) 
+              : null;
+
             const newLesson = lessonRepo.create({
               title: les.title,
               content: les.content,
@@ -109,6 +114,7 @@ export const createCourse = async (req: Request, res: Response) => {
               module: newModule,
               isProject: !!les.isProject,
               isExercise: !!les.isExercise,
+              resources: resourcesJson,
             });
             totalLessons++;
 
@@ -190,6 +196,30 @@ export const uploadCourseThumbnail = async (req: Request, res: Response) => {
 
     // Return the URL, frontend will send this when creating the course
     res.status(200).json({ message: "Thumbnail uploaded", thumbnailUrl: result.secure_url });
+  } catch (err) {
+    res.status(500).json({ error: err });
+  }
+}
+
+export const uploadLessonImage = async (req: Request, res: Response) => {
+  const file = req.file;
+
+  if (!file) {
+    res.status(400).json({ message: "No file uploaded" });
+    return;
+  }
+
+  try {
+    const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      res.status(400).json({ message: "Only image files are allowed (jpg, png, webp)" });
+      return;
+    }
+
+    const result = await uploadLessonImg(file.path); 
+
+    // Return the URL
+    res.status(200).json({ message: "Image uploaded", imageUrl: result.secure_url });
   } catch (err) {
     res.status(500).json({ error: err });
   }
@@ -429,7 +459,12 @@ export const getCourseById = async (req: Request, res: Response) => {
       details: `Updated a course: ${course.title}`,
     }); 
 
-    res.status(200).json({ message: "Course updated successfully" });
+    const sanitized = {
+      ...course,
+      instructor: excludePassword(course.instructor),
+    };
+
+    res.status(200).json({ message: "Course updated successfully", course: sanitized });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to update course" });
@@ -535,7 +570,7 @@ export const getStudentsByInstructor = async (req: Request, res: Response) => {
     // Get instructor's courses
     const courses = await courseRepo.find({
       where: { instructor: { id: Number(instructorId) } },
-      select: ["id"], // we just need course IDs
+      select: ["id", "title"], // we just need course IDs
     });
 
     if (!courses.length) {
@@ -547,19 +582,33 @@ export const getStudentsByInstructor = async (req: Request, res: Response) => {
     // Get all enrollments for these courses
     const enrollments = await enrollmentRepo.find({
       where: { course: { id: In(courseIds) } },
-      relations: ["user"],
+      relations: ["user", "course"],
     });
 
-    const students = enrollments.map(enroll => enroll.user);
+     // Map students to courses
+    const studentMap: Record<number, { student: Users; courses: Course[] }> = {};
 
-    // Deduplicate by user id
-    const uniqueStudents = Array.from(new Map(students.map(s => [s.id, s])).values());
+    for (const enroll of enrollments) {
+      const user = enroll.user;
+      if (!studentMap[user.id]) {
+        studentMap[user.id] = { student: user, courses: [] };
+      }
+      studentMap[user.id].courses.push({
+        id: enroll.course.id,
+        title: enroll.course.title,
+      } as Course);
+    }
+
+    const studentsWithCourses = Object.values(studentMap).map(entry => ({
+      student: excludePassword(entry.student),
+      courses: entry.courses,
+    }));
 
     return res.json({
       success: true,
       instructorId,
-      studentCount: uniqueStudents.length,
-      students: uniqueStudents,
+      studentCount: studentsWithCourses.length,
+      students: studentsWithCourses,
     });
   } catch (err) {
     console.error("Failed to fetch students by instructor:", err);
