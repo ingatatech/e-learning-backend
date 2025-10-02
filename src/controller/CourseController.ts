@@ -13,8 +13,7 @@ import { Enrollment } from "../database/models/EnrollmentModel";
 import { Category } from "../database/models/CategoryModel";
 import { logActivity } from "../middleware/ActivityLog";
 import { In } from "typeorm";
-import { profile } from "console";
-
+import parseCorrectAnswer from "../middleware/parseAnswers";
 export interface CustomRequest extends Request {
   user?: Users; 
 }
@@ -227,28 +226,54 @@ export const uploadLessonImage = async (req: Request, res: Response) => {
 
 
 export const getCourseById = async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const courseRepo = AppDataSource.getRepository(Course);
+  const { id } = req.params
+  const courseRepo = AppDataSource.getRepository(Course)
 
-    try {
-      const course = await courseRepo.findOne({
-        where: { id },
-        relations: ["instructor", "category", "organization", "modules", "modules.lessons", "modules.lessons.assessments", "modules.lessons.assessments.questions"],
-      });
+  try {
+    const course = await courseRepo.findOne({
+      where: { id },
+      relations: [
+        "instructor",
+        "category",
+        "organization",
+        "modules",
+        "modules.lessons",
+        "modules.lessons.assessments",
+        "modules.lessons.assessments.questions",
+      ],
+      order: { modules: { order: "ASC" } },
+    })
 
-      if (!course) return res.status(404).json({ message: "Course not found" });
+    if (!course) return res.status(404).json({ message: "Course not found" })
 
-      const sanitize = {
-        ...course,
-        instructor: excludePassword(course.instructor),
-      }
+    // walk through the structure and normalize only the questions
+    course.modules?.forEach((mod) => {
+      mod.lessons?.forEach((lesson) => {
+        lesson.assessments?.forEach((assessment) => {
+           assessment.questions?.forEach((q) => {
+            if (q.type === "multiple_choice") {
+              // multiple answers possible → array
+              q.correctAnswer = parseCorrectAnswer(q.correctAnswer as any) as string[];
+            } else {
+              // just keep it as string
+              q.correctAnswer = q.correctAnswer as string;
+            }
+          });
+        })
+      })
+    })
 
-      res.status(200).json({ message: "Course fetched successfully", course: sanitize });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Failed to fetch course" });
+    const sanitize = {
+      ...course,
+      instructor: excludePassword(course.instructor),
     }
-  };
+
+    res.status(200).json({ message: "Course fetched successfully", course: sanitize })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ message: "Failed to fetch course" })
+  }
+}
 
   export const getCoursesByInstructor = async (req: Request, res: Response) => {
   const { instructorId } = req.params;
@@ -613,6 +638,62 @@ export const getStudentsByInstructor = async (req: Request, res: Response) => {
   } catch (err) {
     console.error("Failed to fetch students by instructor:", err);
     return res.status(500).json({ error: "Failed to fetch students" });
+  }
+};
+
+
+export const getInstructorAssessments = async (req: Request, res: Response) => {
+  const { instructorId } = req.params;
+
+  try {
+    if (!instructorId) {
+      return res.status(400).json({ message: "Missing instructorId" });
+    }
+
+    const courseRepo = AppDataSource.getRepository(Course);
+
+    // Grab instructor’s courses with nested modules/lessons/assessments
+    const courses = await courseRepo.find({
+      where: { instructor: { id: Number(instructorId) } },
+      relations: [
+        "modules",
+        "modules.lessons",
+        "modules.lessons.assessments",
+        "modules.lessons.assessments.questions"
+      ],
+    });
+
+    if (!courses.length) {
+      return res.status(404).json({ message: "No courses found for this instructor" });
+    }
+
+    // Flatten all assessments across all lessons/modules
+    const assessments = courses.flatMap(course =>
+      course.modules.flatMap(module =>
+        module.lessons.flatMap(lesson =>
+          lesson.assessments.map(assessment => ({
+            id: assessment.id,
+            title: assessment.title,
+            description: assessment.description,
+            lessonId: lesson.id,
+            lessonTitle: lesson.title,
+            courseId: course.id,
+            courseTitle: course.title,
+            questions: assessment.questions
+          }))
+        )
+      )
+    );
+
+    return res.status(200).json({
+      success: true,
+      instructorId,
+      totalAssessments: assessments.length,
+      assessments,
+    });
+  } catch (err) {
+    console.error("Failed to fetch instructor assessments:", err);
+    return res.status(500).json({ message: "Failed to fetch assessments" });
   }
 };
 

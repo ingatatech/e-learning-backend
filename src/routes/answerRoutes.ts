@@ -1,6 +1,6 @@
 import e, { Router } from "express";
 import { authenticateToken } from "../middleware/JwtParsing";
-import { getUserAssessmentAnswers, submitAnswer } from "../controller/AnswerController";
+import { getSubmissionsByInstructor, getUserAssessmentAnswers, submitAnswer } from "../controller/AnswerController";
 const router = Router();
 
 /**
@@ -130,6 +130,9 @@ router.post("/submit", authenticateToken, submitAnswer);
  *         description: Server error
  */
 router.get("/:assessmentId/user/:userId", authenticateToken, getUserAssessmentAnswers);
+
+
+router.get("/:instructorId/submissions", authenticateToken, getSubmissionsByInstructor);
 
 
 export default router;

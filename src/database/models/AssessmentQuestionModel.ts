@@ -23,7 +23,7 @@ export class AssessmentQuestion {
   options!: string[];
 
   @Column("text")
-  correctAnswer!: string; // can be JSON/stringified for multiple answers
+  correctAnswer!: string | string[]; 
 
   @Column("int")
   points!: number;

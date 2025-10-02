@@ -32,6 +32,7 @@ export const getUserProgress = async (req: Request, res: Response) => {
       isCompleted: row.isCompleted,
       completedAt: row.completedAt,
       score: row.score,
+      status: row.status || null
     }))
 
     // If no progress exists, initialize empty array
@@ -102,6 +103,51 @@ export const completeStep = async (req: Request, res: Response) => {
   } catch (err) {
     console.error("Error completing step:", err)
     return res.status(500).json({ error: "Failed to complete step" })
+  }
+}
+
+export const markStepPending = async (req: Request, res: Response) => {
+  try {
+    const { courseId, userId, lessonId, assessmentId } = req.body
+
+    let progress = await progressRepo.findOne({
+      where: {
+        user: { id: userId },
+        course: { id: courseId },
+        ...(lessonId ? { lesson: { id: lessonId } } : {}),
+        ...(assessmentId ? { assessment: { id: assessmentId } } : {}),
+      },
+      relations: ["lesson", "assessment"],
+    })
+
+    if (!progress) {
+      progress = progressRepo.create({
+        user: { id: userId } as Users,
+        course: { id: courseId } as Course,
+        lesson: lessonId ? ({ id: lessonId } as Lesson) : undefined,
+        assessment: assessmentId ? ({ id: assessmentId } as Assessment) : undefined,
+        isCompleted: false,
+        status: "pending",
+      })
+    } else {
+      if (req.body.ready) {
+        progress.isCompleted = false
+        progress.status = "pending"
+      } 
+    }
+
+    if (!progress) {
+      return res.status(404).json({ error: "Progress not found" })
+    }
+
+    progress.isCompleted = false
+    progress.status = "pending"
+    await progressRepo.save(progress)
+
+    return res.json({ success: true, progress })
+  } catch (err) {
+    console.error("Error marking step as pending:", err)
+    return res.status(500).json({ error: "Failed to mark step as pending" })
   }
 }
 

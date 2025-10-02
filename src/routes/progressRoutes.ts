@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { getUserProgress, completeStep, updateCurrentStep } from "../controller/ProgressController"
+import { getUserProgress, completeStep, updateCurrentStep, markStepPending } from "../controller/ProgressController"
 
 const router = Router()
 
@@ -8,6 +8,9 @@ router.get("/course/:courseId/user/:userId/", getUserProgress)
 
 // COMPLETE step
 router.post("/complete-step", completeStep)
+
+// PENDING step
+router.post("/pending-step", markStepPending)
 
 // UPDATE progress
 router.put("/update-current-step", updateCurrentStep)
