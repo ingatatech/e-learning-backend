@@ -5,12 +5,9 @@ import { Users } from "../database/models/UserModel"
 import { Course } from "../database/models/CourseModel"
 import { Assessment } from "../database/models/AssessmentModel"
 import { Lesson } from "../database/models/LessonModel"
-import { excludePassword } from "../utils/excludePassword"
 import { Enrollment } from "../database/models/EnrollmentModel"
 
 const progressRepo = AppDataSource.getRepository(Progress)
-const userRepo = AppDataSource.getRepository(Users)
-const courseRepo = AppDataSource.getRepository(Course)
 
 // Get user progress for a course
 export const getUserProgress = async (req: Request, res: Response) => {
@@ -80,7 +77,7 @@ export const completeStep = async (req: Request, res: Response) => {
         score,
       })
     } else {
-      if (req.body.ready) progress.isCompleted = true
+      progress.isCompleted = true
       if (score !== undefined) progress.score = score
     }
 
@@ -187,4 +184,41 @@ export const updateCurrentStep = async (req: Request, res: Response) => {
     return res.status(500).json({ error: "Failed to update current step" })
   }
 }
+
+
+export const retakeAssessment = async (req: Request, res: Response) => {
+  try {
+    const { studentId, assessmentId } = req.body;
+
+    if (!studentId || !assessmentId) {
+      return res.status(400).json({ message: "studentId and assessmentId are required" });
+    }
+
+    const progressRepo = AppDataSource.getRepository(Progress);
+
+    // find the existing progress
+    const progress = await progressRepo.findOne({
+      where: { user: { id: studentId }, assessmentId },
+    });
+
+    if (!progress) {
+      return res.status(404).json({ message: "Progress not found for this student and assessment" });
+    }
+
+    // reset status so they can retake
+    progress.isCompleted = false;
+    progress.status = null; 
+
+    await progressRepo.save(progress);
+
+    return res.json({
+      message: "Assessment reset for retake successfully",
+      progress,
+    });
+  } catch (error) {
+    console.error("Error resetting assessment:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 

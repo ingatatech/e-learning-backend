@@ -7,6 +7,8 @@ import { AssessmentQuestion } from "../database/models/AssessmentQuestionModel"
 import { excludePassword } from "../utils/excludePassword"
 import { Course } from "../database/models/CourseModel"
 import { In } from "typeorm"
+import { Progress } from "../database/models/ProgressModel"
+import { sendGradingCompleteEmail } from "../services/SessionOtp"
 
 export const submitAnswer = async (req: Request, res: Response) => {
   try {
@@ -214,96 +216,150 @@ export const getUserAssessmentAnswers = async (req: Request, res: Response) => {
   }
 };
 
+
 export const getSubmissionsByInstructor = async (req: Request, res: Response) => {
-  const { instructorId } = req.params;
+  const { instructorId } = req.params
 
   try {
     if (!instructorId) {
-      return res.status(400).json({ message: "Missing instructorId" });
+      return res.status(400).json({ message: "Missing instructorId" })
     }
 
-    const courseRepo = AppDataSource.getRepository(Course);
-    const answerRepo = AppDataSource.getRepository(Answer);
+    const answerRepo = AppDataSource.getRepository(Answer)
 
-    // Fetch all instructor courses with assessments
-    const courses = await courseRepo.find({
-      where: { instructor: { id: Number(instructorId) } },
-      relations: [
-        "modules",
-        "modules.lessons",
-        "modules.lessons.assessments",
-      ],
-    });
+    // Join Progress manually
+    const answers = await answerRepo
+      .createQueryBuilder("answer")
+      .leftJoinAndSelect("answer.user", "user")
+      .leftJoinAndSelect("answer.assessment", "assessment")
+      .leftJoinAndSelect("answer.question", "question")
+      .leftJoinAndSelect("assessment.lesson", "lesson")
+      .leftJoinAndSelect("lesson.module", "module")
+      .leftJoinAndSelect("module.course", "course")
+      .innerJoin(Progress, "progress", "progress.assessmentId = assessment.id AND progress.userId = user.id")
+      .where("course.instructorId = :instructorId", { instructorId })
+      .andWhere("progress.status = :status", { status: "pending" })
+      .orderBy("answer.createdAt", "DESC")
+      .getMany()
 
-    if (!courses.length) {
-      return res.status(404).json({ message: "No courses found for this instructor" });
+    if (!answers.length) {
+      return res.status(404).json({ message: "No pending submissions found" })
     }
-
-    const courseMap = new Map<number, string>(); // courseId -> title
-    const assessmentIds: number[] = [];
-
-    courses.forEach(course => {
-      courseMap.set(Number(course.id), course.title);
-      course.modules.forEach(module =>
-        module.lessons.forEach(lesson =>
-          lesson.assessments.forEach(a => assessmentIds.push(Number(a.id)))
-        )
-      );
-    });
-
-    if (!assessmentIds.length) {
-      return res.status(404).json({ message: "No assessments found for this instructor" });
-    }
-
-    // Grab all answers for those assessments
-    const answers = await answerRepo.find({
-      where: { assessment: { id: In(assessmentIds) } },
-      relations: ["user", "assessment", "question", "assessment.lesson.module.course"],
-      order: { createdAt: "DESC" },
-    });
 
     // Group by student + assessment
-    const submissionMap = new Map<string, any>();
+    const submissionMap = new Map<string, any>()
 
     for (const ans of answers) {
-      const key = `${ans.user.id}-${ans.assessment.id}`;
+      const key = `${ans.user.id}-${ans.assessment.id}`
       if (!submissionMap.has(key)) {
         submissionMap.set(key, {
           id: key,
+          assessmentId: `${ans.assessment.id}`,
+          studentId: `${ans.user.id}`,
           studentName: `${ans.user.firstName} ${ans.user.lastName}`,
           studentEmail: ans.user.email,
-          courseName: ans.assessment.lesson!.module.course.title,
+          courseName: ans.assessment.lesson?.module.course.title,
           assessmentTitle: ans.assessment.title,
           submittedAt: ans.createdAt,
           questions: [],
-        });
+        })
       }
 
-      const submission = submissionMap.get(key);
+      const submission = submissionMap.get(key)
       submission.questions.push({
         id: ans.question.id,
         question: ans.question.question,
         type: ans.question.type,
         answer: ans.answer,
+        answerId: ans.id,
         points: ans.question.points || 0,
         isCorrect: ans.isCorrect,
-        pointsEarned: ans.pointsEarned || 0
-      });
+        pointsEarned: ans.pointsEarned || 0,
+      })
     }
 
-    const submissions = Array.from(submissionMap.values());
+    const submissions = Array.from(submissionMap.values())
 
     return res.status(200).json({
       success: true,
       instructorId,
       totalSubmissions: submissions.length,
       submissions,
-    });
+    })
   } catch (err) {
-    console.error("Failed to fetch submissions for manual grading:", err);
-    return res.status(500).json({ message: "Failed to fetch submissions" });
+    console.error("Failed to fetch pending submissions:", err)
+    return res.status(500).json({ message: "Failed to fetch submissions" })
   }
-};
+}
+
+
+
+export const gradeAssessmentManually = async (req: Request, res: Response) => {
+  const { assessmentId, studentId, gradedAnswers, finalScore } = req.body
+
+  const answerRepo = AppDataSource.getRepository(Answer)
+  const progressRepo = AppDataSource.getRepository(Progress)
+  const assessmentRepo = AppDataSource.getRepository(Assessment)
+
+  try {
+    // Fetch assessment
+    const assessment = await assessmentRepo.findOne({
+      where: { id: assessmentId },
+    })
+    if (!assessment) {
+      return res.status(404).json({ message: "Assessment not found" })
+    }
+
+    // Update each answer with pointsEarned
+    for (const graded of gradedAnswers) {
+      console.log(graded)
+      await answerRepo.update(
+        { id: graded.answerId, user: { id: studentId } },
+        { pointsEarned: graded.pointsEarned }
+      )
+    }
+
+    //  Update progress table
+    const progress = await progressRepo.findOne({
+      where: { user: { id: studentId }, course: { id: assessment.course?.id }, assessment: { id: assessmentId } },
+      relations: ["course", "user"],
+    })
+
+    if (progress) {
+      if (finalScore >= assessment.passingScore) {
+        progress.status = "completed"
+        progress.isCompleted = true
+      } else {
+        progress.status = "failed"
+        progress.isCompleted = false
+      }
+
+      progress.score = finalScore
+      await progressRepo.save(progress)
+
+      // Send grading complete email
+      if (progress.user?.email) {
+        await sendGradingCompleteEmail(
+          progress.user.email,
+          progress.user.lastName || "",
+          progress.user.firstName || "",
+          assessment.title,
+          req
+        )
+      }
+    }
+
+    return res.status(200).json({
+      message: "Assessment graded successfully",
+      score: finalScore,
+      passed: finalScore >= assessment.passingScore,
+    })
+  } catch (err) {
+    console.error("Manual grading error:", err)
+    res.status(500).json({ message: "Failed to grade assessment" })
+  }
+}
+
 
 
 

@@ -431,6 +431,74 @@ export const sendEnrollmentEmail = async (
 };
 
 
+export const sendGradingCompleteEmail = async (
+  email: string,
+  lastName: string,
+  firstName: string,
+  assessmentTitle: string,
+  req: Request
+): Promise<boolean> => {
+  try {
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_PASSWORD) {
+      console.error("GMAIL_USER or GMAIL_PASSWORD not defined in environment variables.");
+      return false;
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_PASSWORD,
+      },
+    });
+
+    const emailContent = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head><meta charset="UTF-8"><title>Assessment Graded</title></head>
+      <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #fff; padding: 30px; border-radius: 8px;">
+          <h2 style="color: #333;">Hello ${firstName} ${lastName},</h2>
+          <p>Your instructor has finished grading your assessment:</p>
+          <ul style="padding-left: 20px;">
+            <li><strong>${assessmentTitle}</strong></li>
+          </ul>
+          <p>Log in to your student dashboard to view your grades and feedback.</p>
+          <div style="text-align: center; margin-top: 20px;">
+            <a href="${process.env.FRONTEND_URL}/courses/11/learn" style="background-color: #28a745; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">View Grades</a>
+          </div>
+          <p style="margin-top: 20px; font-size: 12px; color: #666;">Sent to ${firstName} ${lastName} (${email})</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const mailOptions = {
+      from: process.env.GMAIL_USER,
+      to: email,
+      subject: `Your assessment has been graded`,
+      html: emailContent,
+    };
+
+    return new Promise<boolean>((resolve, reject) => {
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error('Error sending grading complete email:', error);
+          reject(false);
+        } else {
+          console.log(`Grading complete email sent to ${email}: ${info.response}`);
+          resolve(true);
+        }
+      });
+    });
+  } catch (error) {
+    console.error('Error sending grading complete email:', error);
+    return false;
+  }
+};
+
+
+
 
 
 // Function to invalidate OTP for a specific email

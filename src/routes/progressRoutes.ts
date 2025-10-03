@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { getUserProgress, completeStep, updateCurrentStep, markStepPending } from "../controller/ProgressController"
+import { getUserProgress, completeStep, updateCurrentStep, markStepPending, retakeAssessment } from "../controller/ProgressController"
 
 const router = Router()
 
@@ -14,5 +14,8 @@ router.post("/pending-step", markStepPending)
 
 // UPDATE progress
 router.put("/update-current-step", updateCurrentStep)
+
+// RETAKE assessment
+router.put("/retake-assessment", retakeAssessment)
 
 export default router

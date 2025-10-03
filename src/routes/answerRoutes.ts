@@ -1,6 +1,6 @@
 import e, { Router } from "express";
 import { authenticateToken } from "../middleware/JwtParsing";
-import { getSubmissionsByInstructor, getUserAssessmentAnswers, submitAnswer } from "../controller/AnswerController";
+import { getSubmissionsByInstructor, getUserAssessmentAnswers, gradeAssessmentManually, submitAnswer } from "../controller/AnswerController";
 const router = Router();
 
 /**
@@ -133,6 +133,10 @@ router.get("/:assessmentId/user/:userId", authenticateToken, getUserAssessmentAn
 
 
 router.get("/:instructorId/submissions", authenticateToken, getSubmissionsByInstructor);
+
+router.post("/grade-manually", authenticateToken, gradeAssessmentManually);
+
+
 
 
 export default router;

@@ -48,8 +48,8 @@ export class Progress {
   @Column({ default: false })
   isCompleted!: boolean
 
-  @Column({ nullable: true })
-  status?: string
+  @Column({ type: "text", nullable: true })
+  status?: string | null;
 
   @Column({ type: "float", nullable: true })
   score?: number
