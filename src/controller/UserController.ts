@@ -323,6 +323,7 @@ import crypto from 'crypto';
 import { uploadToCloudinary } from "../services/cloudinary";
 import { getOrCreateUser } from "../utils/createUser";
 import { Organization } from "../database/models/OrganizationModel";
+import { excludePassword } from "../utils/excludePassword";
 
 
 interface CustomRequest extends Request {
@@ -414,8 +415,8 @@ static async getUsers(req: CustomRequest, res: Response): Promise<void> {
   try {
     const userRepository = AppDataSource.getRepository(Users);
 
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 10;
+    const page = Number(req.query.page) || 100;
+    const limit = Number(req.query.limit) || 300;
     const offset = (page - 1) * limit;
 
     const [users, total] = await userRepository.findAndCount({
@@ -448,6 +449,40 @@ static async getUsers(req: CustomRequest, res: Response): Promise<void> {
       message: "Error fetching users",
       error: error instanceof Error ? error.message : String(error),
     });
+  }
+}
+
+static async getInstructorsByOrg(req: Request, res: Response): Promise<void> {
+  try {
+    const organizationId = Number(req.params.organizationId);
+    const userRepository = AppDataSource.getRepository(Users);  
+
+    const instructors = await userRepository.find({
+      where: { organization: { id: organizationId }, role: "instructor" },
+      relations: ["organization"],
+    });
+
+    const userDtos = instructors.map(user => ({
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      organization: user.organization,
+      isActive: user.isActive,
+      createdAt: user.createdAt,
+      role: user.role || null,
+    }));
+
+
+    res.status(200).json({
+      message: "Instructors fetched successfully",
+      instructors: userDtos,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error fetching instructors",
+      error: error instanceof Error ? error.message : String(error),
+    })
   }
 }
 

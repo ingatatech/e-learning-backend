@@ -110,6 +110,8 @@ router.get("/all", authenticateToken, UserClassController.getUsers.bind(UserClas
 
 router.get("/all/org/:organizationId", authenticateToken, UserClassController.getUsersByOrg.bind(UserClassController));
 
+router.get("/instructors/org/:organizationId", authenticateToken, UserClassController.getInstructorsByOrg.bind(UserClassController));
+
 
 /**
  * @swagger
