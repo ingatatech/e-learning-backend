@@ -1,7 +1,7 @@
 
 import { Router } from "express";
 import { authenticateToken } from "../middleware/JwtParsing";
-import { createCourse, deleteCourse, getCourseById, getCoursesByInstructor, getCoursesByOrganization, getCoursesWithEnrollmentStatus, getInstructorAssessments, getStudentsByCourse, getStudentsByInstructor, updateCourse, uploadCourseThumbnail, uploadLessonImage } from "../controller/CourseController";
+import { createCourse, deleteCourse, getCourseById, getCoursesByInstructor, getCoursesByOrganization, getCoursesWithEnrollmentStatus, getInstructorAssessments, getLiveCoursesByInstructor, getStudentsByCourse, getStudentsByInstructor, updateCourse, uploadCourseThumbnail, uploadLessonImage } from "../controller/CourseController";
 import { hasRole } from "../middleware/RoleMiddleware";
 const router = Router();
 import { upload } from "../middleware/multer";
@@ -479,6 +479,9 @@ router.get("/instructor/:instructorId/students/", authenticateToken, getStudents
  *         description: Failed to fetch courses
  */
 router.get("/instructor/:instructorId/courses", authenticateToken, getCoursesByInstructor);
+
+router.get("/instructor/:instructorId/live/courses", authenticateToken, getLiveCoursesByInstructor);
+
 
 
 /**

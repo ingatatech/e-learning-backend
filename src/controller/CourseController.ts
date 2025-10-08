@@ -302,6 +302,33 @@ export const getCourseById = async (req: Request, res: Response) => {
   }
 };
 
+export const getLiveCoursesByInstructor = async (req: Request, res: Response) => {
+  const { instructorId } = req.params;
+  const courseRepo = AppDataSource.getRepository(Course);
+
+  try {
+    const courses = await courseRepo.find({
+      where: { instructor: { id: Number(instructorId) }, isPublished: true },
+      relations: ["instructor", "category", "organization", "modules", "modules.lessons", "modules.lessons.assessments", "modules.lessons.assessments.questions"],
+      order: { createdAt: "DESC" },
+    });
+
+    if (!courses || courses.length === 0) {
+      return res.status(404).json({ message: "No courses found for this instructor" });
+    }
+
+    const sanitizedCourses = courses.map(course => ({
+      ...course,
+      instructor: excludePassword(course.instructor),
+    }));
+
+    res.status(200).json({ message: "Courses fetched successfully", courses: sanitizedCourses });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch courses" });
+  }
+};
+
 
 
   export const getCoursesByOrganization = async (req: Request, res: Response) => {
@@ -342,7 +369,6 @@ export const getCourseById = async (req: Request, res: Response) => {
       return res.status(500).json({ message: "Failed to fetch courses" });
     }
   }
-
 
 
   export const updateCourse = async (req: Request, res: Response) => {
