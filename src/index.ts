@@ -51,6 +51,7 @@ app.use(
       httpOnly: true,
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 10 * 60 * 1000,
+      path: "/",
     },
   })
 );
