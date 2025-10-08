@@ -223,7 +223,7 @@ router.post('/', authenticateToken, hasRole(['admin']), OrganizationController.c
  *       500:
  *         description: Server error
  */
-router.put('/:id', authenticateToken, hasRole(['admin', 'sysadmin']), OrganizationController.updateOrganizationInfo);
+router.put('/:id', authenticateToken, hasRole(['admin', 'sysAdmin']), OrganizationController.updateOrganizationInfo);
 
 
     // delete organization

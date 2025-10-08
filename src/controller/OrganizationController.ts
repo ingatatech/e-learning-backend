@@ -80,7 +80,7 @@ static async getOrganization(req: CustomRequest, res: Response): Promise<void> {
       return;
     }
 
-    res.json(org);
+    res.status(200).json({ message: 'Organization updated.', organization: org });
   } catch (error) {
     res.status(500).json({ message: 'Something went wrong.'});
   }
@@ -147,12 +147,6 @@ static async updateOrganizationInfo(req: CustomRequest, res: Response): Promise<
     }
 
     const actingUser = req.user!;
-    const isAdmin = actingUser.role === 'admin';
-
-    if (!isAdmin) {
-      res.status(403).json({ message: 'Forbidden: Not authorized to update this organization.' });
-      return;
-    }
 
     if (name) org.name = name;
     if (description) org.description = description;
