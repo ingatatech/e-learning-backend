@@ -330,6 +330,24 @@ export const getLiveCoursesByInstructor = async (req: Request, res: Response) =>
 };
 
 
+export const publishCourse = async (req: Request, res: Response) => {
+  const { courseId } = req.params;
+  const courseRepo = AppDataSource.getRepository(Course);
+
+  try {
+    const course = await courseRepo.findOne({ where: { id: courseId } });
+    if (!course) return res.status(404).json({ message: "Course not found" });
+
+    course.isPublished = true;
+    await courseRepo.save(course);
+
+    res.status(200).json({ message: "Course published successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to publish course" });
+  }
+}
+
 
   export const getCoursesByOrganization = async (req: Request, res: Response) => {
     const courseRepo = AppDataSource.getRepository(Course);
@@ -350,6 +368,45 @@ export const getLiveCoursesByInstructor = async (req: Request, res: Response) =>
 
       const courses = await courseRepo.find({
         where: { organization: { id: Number(orgId) } },
+        relations: ["instructor", "category", "organization", "modules", "modules.lessons", "modules.lessons.assessments", "modules.lessons.assessments.questions"],
+        order: { createdAt: "DESC" },
+      });
+
+      if (!courses || courses.length === 0) {
+        return res.status(404).json({ message: "No courses found in this organization" });
+      }
+
+      const sanitizedCourses = courses.map(course => ({
+        ...course,
+        instructor: excludePassword(course.instructor),
+      }));
+
+      res.status(200).json({ message: "Courses fetched successfully", courses: sanitizedCourses });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: "Failed to fetch courses" });
+    }
+  }
+
+  export const getDraftCoursesByOrganization = async (req: Request, res: Response) => {
+    const courseRepo = AppDataSource.getRepository(Course);
+    const organizationRepo = AppDataSource.getRepository(Organization);
+    const { orgId } = req.params;
+    const orgIdNum = Number(orgId);
+    if (isNaN(orgIdNum)) {
+      return res.status(400).json({ message: "Invalid organization id" });
+    }
+
+    try {
+      const organization = await organizationRepo.findOne({
+        where: { id: orgIdNum },
+      })
+      if (!organization) {
+        return res.status(404).json({ message: "Organization not found" });
+      }
+
+      const courses = await courseRepo.find({
+        where: { organization: { id: Number(orgId) }, isPublished: false },
         relations: ["instructor", "category", "organization", "modules", "modules.lessons", "modules.lessons.assessments", "modules.lessons.assessments.questions"],
         order: { createdAt: "DESC" },
       });

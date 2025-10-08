@@ -1,7 +1,7 @@
 
 import { Router } from "express";
 import { authenticateToken } from "../middleware/JwtParsing";
-import { createCourse, deleteCourse, getCourseById, getCoursesByInstructor, getCoursesByOrganization, getCoursesWithEnrollmentStatus, getInstructorAssessments, getLiveCoursesByInstructor, getStudentsByCourse, getStudentsByInstructor, updateCourse, uploadCourseThumbnail, uploadLessonImage } from "../controller/CourseController";
+import { createCourse, deleteCourse, getCourseById, getCoursesByInstructor, getCoursesByOrganization, getCoursesWithEnrollmentStatus, getDraftCoursesByOrganization, getInstructorAssessments, getLiveCoursesByInstructor, getStudentsByCourse, getStudentsByInstructor, publishCourse, updateCourse, uploadCourseThumbnail, uploadLessonImage } from "../controller/CourseController";
 import { hasRole } from "../middleware/RoleMiddleware";
 const router = Router();
 import { upload } from "../middleware/multer";
@@ -194,6 +194,9 @@ import { upload } from "../middleware/multer";
  *         description: Invalid input
  */
 router.post("/create", authenticateToken, hasRole(['admin', 'sysadmin', 'instructor']), createCourse);
+
+router.post("/:courseId/publish", authenticateToken, publishCourse);
+
 
 
 /**
@@ -484,6 +487,7 @@ router.get("/instructor/:instructorId/live/courses", authenticateToken, getLiveC
 
 
 
+
 /**
  * @swagger
  * /courses/organization/{orgId}/courses:
@@ -629,6 +633,9 @@ router.get("/instructor/:instructorId/live/courses", authenticateToken, getLiveC
  *         description: Failed to fetch courses
  */
 router.get("/organization/:orgId/courses", authenticateToken, getCoursesByOrganization);
+
+router.get("/organization/:orgId/draft/courses", authenticateToken, getDraftCoursesByOrganization);
+
 
 
 /**
