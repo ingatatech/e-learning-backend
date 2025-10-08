@@ -357,6 +357,94 @@ const htmlContent = `
   });
 };
 
+export const sendPasswordResetSuccessEmail = async (email: string) => {
+if (!process.env.GMAIL_USER || !process.env.GMAIL_PASSWORD) {
+console.error("Missing GMAIL creds");
+return;
+}
+
+const transporter = nodemailer.createTransport({
+service: 'gmail',
+auth: {
+user: process.env.GMAIL_USER,
+pass: process.env.GMAIL_PASSWORD,
+},
+});
+
+const htmlContent = `
+  <!DOCTYPE html>
+
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Password Reset Successful - Ingata E-learning</title>
+  </head>
+  <body style="margin: 0; padding: 20px; background-color: #f5f5f5; font-family: Arial, Helvetica, sans-serif; line-height: 1.6;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px 30px; border-radius: 8px;">
+
+  <!-- Header -->
+  <div style="text-align: center; margin-bottom: 30px;">
+    <div style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 8px;">
+      Ingata E-learning
+    </div>
+    <div style="font-size: 14px; color: #666;">
+      Password Reset Successful
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div style="margin-bottom: 30px;">
+    <h1 style="font-size: 20px; color: #333; margin-bottom: 20px;">
+      Your Password Has Been Reset Successfully
+    </h1>
+
+    <p style="color: #666; margin-bottom: 25px;">
+      This is a confirmation that your password was successfully reset. You can now sign in with your new password.
+    </p>
+
+    <div style="text-align: center; margin-bottom: 25px;">
+      <a href="${process.env.FRONTEND_URL}/login" style="background-color: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+        Go to Login
+      </a>
+    </div>
+
+    <div style="background-color: #eaf8ea; padding: 15px; border-radius: 6px; border-left: 4px solid #28a745;">
+      <strong>Tip:</strong> If this wasn’t you, change your password again immediately or contact support below.
+    </div>
+  </div>
+
+  <!-- Support Section -->
+  <div style="text-align: center; margin-bottom: 20px;">
+    <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
+      Need help? Contact our support team
+    </div>
+    <a href="mailto:support@ingatatechnologies.com" style="color: #007bff; text-decoration: none; font-weight: bold;">
+      support@ingatatechnologies.com
+    </a>
+  </div>
+
+  <!-- Footer -->
+  <div style="text-align: center; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 14px;">
+    <div>
+      © ${new Date().getFullYear()} Ingata E-learning. This is a confirmation email for your password reset.
+    </div>
+  </div>
+</div>
+
+  </body>
+  </html>
+  `;
+
+await transporter.sendMail({
+from: process.env.GMAIL_USER,
+to: email,
+subject: 'Your Password Has Been Reset Successfully',
+html: htmlContent,
+});
+};
+
+
 
 export const sendEnrollmentEmail = async (
   email: string,

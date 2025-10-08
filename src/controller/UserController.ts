@@ -3,7 +3,8 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import { Users } from "../database/models/UserModel";
 import { AppDataSource } from "../config/db";
-import bcrypt, { compare, hash } from "bcryptjs";import { generateOtp } from "../services/SessionOtp";
+import bcrypt, { compare, hash } from "bcryptjs";
+import { generateOtp, sendPasswordResetSuccessEmail } from "../services/SessionOtp";
 import { sendOtpEmail } from "../services/SessionOtp";
 import { Otp } from "../database/models/OtpModel";
 import { MoreThan } from "typeorm";
@@ -802,7 +803,7 @@ static async getUsersByOrg(req: Request, res: Response): Promise<void> {
 
         if (!user) {
           // Don't reveal if email exists, just say "if email found"
-          res.status(200).json({ message: "If that email is registered, a reset link has been sent." });
+          res.status(200).json({ message: "A reset link has been sent." });
           return;
         }
 
@@ -851,7 +852,7 @@ static async getUsersByOrg(req: Request, res: Response): Promise<void> {
           return;
         }
 
-        // All good, update password
+        // update password
         user.password = await hash(newPassword, 10);
         user.resetPasswordToken = null;
         user.resetPasswordExpires = null;
@@ -865,6 +866,8 @@ static async getUsersByOrg(req: Request, res: Response): Promise<void> {
           targetType: 'Users',
           details: 'Users reset their password using reset token.',
         });
+
+        await sendPasswordResetSuccessEmail(user.email);
 
         res.status(200).json({ message: "Password reset successfully." });
       } catch (err) {
