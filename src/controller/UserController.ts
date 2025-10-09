@@ -177,6 +177,7 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
     );
 
     res.cookie("accessToken", token, {
+      domain: process.env.NODE_ENV === "production" ? ".onrender.com" : undefined,
       httpOnly: true,
       maxAge: COOKIE_EXPIRATION,
       sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
@@ -265,6 +266,7 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
       );
 
       res.cookie("accessToken", accessToken, {
+        domain: process.env.NODE_ENV === "production" ? ".onrender.com" : undefined,
         httpOnly: true,
         maxAge: COOKIE_EXPIRATION,
         sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
