@@ -47,10 +47,11 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
+      domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined,
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 10 * 60 * 1000,
+      maxAge: 30 * 24 * 60 * 60 * 1000,
       path: "/",
     },
   })
@@ -165,7 +166,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: [
     "http://localhost:3000",
-    "https://fms-temp-frontend.onrender.com"
+    "https://e-learning-yixk.onrender.com"
   ],
   credentials: true
 } 
