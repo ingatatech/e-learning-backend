@@ -17,7 +17,7 @@ export class Document {
   @Column({ type: "varchar", length: 255 })
   title!: string;
 
-  @Column({ type: "text" })
+  @Column({ type: "text", nullable: true })
   content!: string;
 
   @Column()
@@ -48,6 +48,10 @@ export class Document {
 
   @Column({ type: "text", nullable: true })
   reviewNotes?: string;
+
+  @Column({ nullable: true })
+  fileUrl?: string
+
 
   @CreateDateColumn()
   createdAt!: Date;

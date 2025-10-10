@@ -12,7 +12,7 @@ export const storage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => ({
     folder: "uploads",
-    resource_type: "auto",
+    resource_type: "raw",
     public_id: file.originalname.split('.')[0].trim().replace(/[^\w\-_.]/g, "_"),
   }),
 });
@@ -29,4 +29,8 @@ export const uploadToCloud = (filePath: string): Promise<any> => {
 
 export const uploadLessonImg = (filePath: string): Promise<any> => {
   return cloudinary.uploader.upload(filePath, { folder: 'lessons' });
+};
+
+export const uploadDoc = (filePath: string): Promise<any> => {
+  return cloudinary.uploader.upload(filePath, { folder: 'docs', resource_type: 'raw' });
 };

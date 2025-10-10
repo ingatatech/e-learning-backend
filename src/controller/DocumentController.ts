@@ -4,6 +4,7 @@ import { Document } from "../database/models/DocumentModel";
 import { excludePassword } from "../utils/excludePassword";
 import { Not } from "typeorm";
 import { sendDocumentReviewNotification } from "../services/SessionOtp";
+import { uploadDoc } from "../services/cloudinary";
 
 interface CustomRequest extends Request {
   user?: { id: number; roleName: string };
@@ -23,6 +24,41 @@ export const createDocument = async (req: CustomRequest, res: Response) => {
     res.status(500).json({ message: "Failed to create document", error: err });
   }
 };
+
+
+export const uploadDocumentFile = async (req: Request, res: Response) => {
+  const file = req.file;
+
+  if (!file) return res.status(400).json({ message: "No file uploaded" });
+
+  try {
+      const allowedMimeTypes = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+
+      if (!allowedMimeTypes.includes(file.mimetype)) {
+        return res.status(400).json({ message: "Only PDF, DOC, and DOCX files are allowed" });
+      }
+      console.log(file)
+
+     const result = await uploadDoc(file.path);
+
+
+    // Save file info to DB
+    const docRepo = AppDataSource.getRepository(Document);
+    const newDoc = docRepo.create({
+      title: req.body.title,
+      instructorId: req.body.instructorId,
+      fileUrl: result.secure_url,
+    });
+
+    await docRepo.save(newDoc);
+
+    res.status(200).json({ message: "Document uploaded successfully", newDoc });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to upload document", error: err });
+  }
+};
+
 
 export const getInstructorDocuments = async (req: CustomRequest, res: Response) => {
   try {

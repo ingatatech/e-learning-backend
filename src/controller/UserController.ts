@@ -879,6 +879,7 @@ static async getUsersByOrg(req: Request, res: Response): Promise<void> {
     static async uploadProfilePic(req: CustomRequest, res: Response): Promise<void> {
       const userId = Number(req.params.id);
       const file = req.file;
+      console.log(file)
 
       if (!file) {
         res.status(400).json({ message: "No file uploaded" });
