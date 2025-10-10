@@ -37,7 +37,6 @@ export const uploadDocumentFile = async (req: Request, res: Response) => {
       if (!allowedMimeTypes.includes(file.mimetype)) {
         return res.status(400).json({ message: "Only PDF, DOC, and DOCX files are allowed" });
       }
-      console.log(file)
 
      const result = await uploadDoc(file.path);
 
