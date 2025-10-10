@@ -124,7 +124,12 @@ export const changeDocumentStatus = async (req: CustomRequest, res: Response) =>
         reviewNotes
       );
     }
-    res.status(200).json(updated);
+
+    const sanitized = {
+      ...updated,
+      instructor: excludePassword(updated.instructor),
+    }
+    res.status(200).json(sanitized);
   } catch (err) {
     res.status(500).json({ message: "Failed to change document status", error: err });
   }
