@@ -47,6 +47,7 @@ export const uploadDocumentFile = async (req: Request, res: Response) => {
       title: req.body.title,
       instructorId: req.body.instructorId,
       fileUrl: result.secure_url,
+      fileType: file.mimetype
     });
 
     await docRepo.save(newDoc);

@@ -52,6 +52,8 @@ export class Document {
   @Column({ nullable: true })
   fileUrl?: string
 
+  @Column({ type: "varchar", length: 50 })
+  fileType!: string;
 
   @CreateDateColumn()
   createdAt!: Date;
