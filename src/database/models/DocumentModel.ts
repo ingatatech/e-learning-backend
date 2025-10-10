@@ -52,7 +52,7 @@ export class Document {
   @Column({ nullable: true })
   fileUrl?: string
 
-  @Column({ type: "varchar", length: 50, nullable: true })
+  @Column({ type: "varchar", nullable: true })
   fileType!: string;
 
   @CreateDateColumn()
