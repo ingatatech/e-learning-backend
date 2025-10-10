@@ -8,6 +8,7 @@ import enrollmentRoutes from './enrollmentRoutes'
 import progressRoutes from './progressRoutes'
 import answerRoutes from './answerRoutes'
 import analyticsRoutes from './analyticsRoutes'
+import documentRoutes from "./documentRoutes";
 
 const router = Router();
 
@@ -19,5 +20,6 @@ router.use("/enrollments", enrollmentRoutes);
 router.use("/progress", progressRoutes)
 router.use("/answers", answerRoutes)
 router.use("/stats", analyticsRoutes)
+router.use("/docs", documentRoutes)
 
 export default router;

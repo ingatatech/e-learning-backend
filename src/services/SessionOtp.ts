@@ -445,6 +445,101 @@ html: htmlContent,
 };
 
 
+export const sendDocumentReviewNotification = async (
+  email: string,
+  status: "approved" | "rejected",
+  courseTitle: string,
+  reviewNotes?: string
+) => {
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_PASSWORD) {
+    console.error("Missing GMAIL creds");
+    return;
+  }
+
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_PASSWORD,
+    },
+  });
+
+  const isApproved = status === "approved";
+  const mainColor = isApproved ? "#28a745" : "#dc3545"; // green for approved, red for rejected
+  const bgColor = isApproved ? "#eaf8ea" : "#f8eaea";
+  const statusText = isApproved ? "Approved" : "Rejected";
+
+  const htmlContent = `
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Course Review Notification - Ingata E-learning</title>
+  </head>
+  <body style="margin: 0; padding: 20px; background-color: #f5f5f5; font-family: Arial, Helvetica, sans-serif; line-height: 1.6;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px 30px; border-radius: 8px;">
+
+      <!-- Header -->
+      <div style="text-align: center; margin-bottom: 30px;">
+        <div style="font-size: 24px; font-weight: bold; color: ${mainColor}; margin-bottom: 8px;">
+          Ingata E-learning
+        </div>
+        <div style="font-size: 14px; color: #666;">
+          Course Submission ${statusText}
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div style="margin-bottom: 30px;">
+        <h1 style="font-size: 20px; color: #333; margin-bottom: 20px;">
+          Your course "${courseTitle}" has been ${statusText.toLowerCase()}
+        </h1>
+
+        ${reviewNotes && !isApproved ? `<p style="color: #666; margin-bottom: 25px;">Review notes: ${reviewNotes}</p>` : ""}
+
+        <div style="text-align: center; margin-bottom: 25px;">
+          <a href="${process.env.FRONTEND_URL}/dashboard" style="background-color: ${mainColor}; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+            Go to Dashboard
+          </a>
+        </div>
+
+        <div style="background-color: ${bgColor}; padding: 15px; border-radius: 6px; border-left: 4px solid ${mainColor};">
+          <strong>Tip:</strong> If something looks wrong, contact support below.
+        </div>
+      </div>
+
+      <!-- Support Section -->
+      <div style="text-align: center; margin-bottom: 20px;">
+        <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
+          Need help? Contact our support team
+        </div>
+        <a href="mailto:support@ingatatechnologies.com" style="color: #007bff; text-decoration: none; font-weight: bold;">
+          support@ingatatechnologies.com
+        </a>
+      </div>
+
+      <!-- Footer -->
+      <div style="text-align: center; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 14px;">
+        <div>
+          © ${new Date().getFullYear()} Ingata E-learning. This is a notification for your course review.
+        </div>
+      </div>
+    </div>
+  </body>
+  </html>
+  `;
+
+  await transporter.sendMail({
+    from: process.env.GMAIL_USER,
+    to: email,
+    subject: `Your course "${courseTitle}" has been ${statusText}`,
+    html: htmlContent,
+  });
+};
+
+
+
 
 export const sendEnrollmentEmail = async (
   email: string,

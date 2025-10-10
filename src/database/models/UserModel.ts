@@ -6,6 +6,7 @@ import { Course } from "./CourseModel";
 import { Enrollment } from "./EnrollmentModel";
 import { Review } from "./ReviewModel";
 import { Progress } from "./ProgressModel";
+import { Document } from "./DocumentModel";
 
 @Entity()
 export class Users {
@@ -88,6 +89,9 @@ export class Users {
 
   @OneToMany(() => Progress, (progress) => progress.user)
   progress!: Progress[]
+
+  @OneToMany(() => Document, (document) => document.instructor, { cascade: true })
+  documents!: Document[];
 
   @CreateDateColumn()
   createdAt!: Date;
