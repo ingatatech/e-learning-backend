@@ -174,7 +174,7 @@ export const updateCurrentStep = async (req: Request, res: Response) => {
       })
     }
 
-    progress.lastAccessedAt = new Date() // update timestamp
+    progress.lastAccessedAt = new Date() // update timestamptz
 
     await progressRepo.save(progress)
 

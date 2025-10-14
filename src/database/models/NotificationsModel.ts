@@ -18,7 +18,7 @@ export class Notification {
   @Column({ type: 'varchar', nullable: true })
   link?: string;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ type: 'timestamptz', default: () => 'CURRENT_timestamptz' })
   createdAt!: Date;
 
   // Optional: Type of notification (e.g., file_uploaded, user_added, etc.)

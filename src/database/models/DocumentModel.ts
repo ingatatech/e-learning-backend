@@ -37,10 +37,10 @@ export class Document {
   })
   status!: "draft" | "submitted" | "approved" | "rejected";
 
-  @Column({ type: "timestamp", nullable: true })
+  @Column({ type: "timestamptz", nullable: true })
   submittedAt?: Date;
 
-  @Column({ type: "timestamp", nullable: true })
+  @Column({ type: "timestamptz", nullable: true })
   reviewedAt?: Date;
 
   @Column({ type: "int", nullable: true })
@@ -61,6 +61,6 @@ export class Document {
   @UpdateDateColumn()
   updatedAt!: Date;
 
-  @Column({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
+  @Column({ type: "timestamptztz", default: () => "CURRENT_timestamptz" })
   lastEditedAt!: Date;
 }

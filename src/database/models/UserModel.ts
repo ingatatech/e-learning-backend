@@ -66,7 +66,7 @@ export class Users {
   @Column({ type: 'varchar', nullable: true, length: 64 })
   resetPasswordToken?: string | null;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   resetPasswordExpires?: Date | null;
 
   @Column({ nullable: true })
