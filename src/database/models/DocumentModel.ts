@@ -61,6 +61,6 @@ export class Document {
   @UpdateDateColumn()
   updatedAt!: Date;
 
-  @Column({ type: "timestamptztz", default: () => "CURRENT_timestamptz" })
+  @Column({ type: "timestamptz", default: () => "CURRENT_timestamptz" })
   lastEditedAt!: Date;
 }
