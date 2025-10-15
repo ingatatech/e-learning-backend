@@ -87,3 +87,45 @@ export const checkCertificate = async (req: Request, res: Response) => {
   }
 };
 
+
+export const verifyCertificate = async (req: Request, res: Response) => {
+  try {
+    const { code } = req.params
+
+    if (!code) {
+      return res.status(400).json({ error: "Certificate code is required" })
+    }
+
+    const certRepo = AppDataSource.getRepository(Certificate)
+
+    const certificate = await certRepo.findOne({
+      where: { code },
+      relations: ["user", "course", "course.organization"],
+    })
+
+    if (!certificate) {
+      return res.status(404).json({ valid: false, message: "Certificate not found or invalid" })
+    }
+
+    return res.json({
+      valid: true,
+      issuedAt: certificate.issuedAt,
+      user: {
+        id: certificate.user.id,
+        name: certificate.user.firstName + " " + certificate.user.lastName,
+      },
+      course: {
+        id: certificate.course.id,
+        title: certificate.course.title,
+      },
+      org: certificate.course.organization?.name,
+      score: certificate.score,
+      code: certificate.code,
+    })
+  } catch (err) {
+    console.error("Error verifying certificate:", err)
+    return res.status(500).json({ error: "Failed to verify certificate" })
+  }
+}
+
+
