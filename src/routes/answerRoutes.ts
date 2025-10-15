@@ -1,6 +1,6 @@
 import e, { Router } from "express";
 import { authenticateToken } from "../middleware/JwtParsing";
-import { getSubmissionsByInstructor, getUserAssessmentAnswers, gradeAssessmentManually, submitAnswer } from "../controller/AnswerController";
+import { getSubmissionsByInstructor, getUserAssessmentAnswers, gradeAssessmentManually, submitAnswers } from "../controller/AnswerController";
 const router = Router();
 
 /**
@@ -67,7 +67,7 @@ const router = Router();
  *       500:
  *         description: Failed to submit answer
  */
-router.post("/submit", authenticateToken, submitAnswer);
+router.post("/submit", authenticateToken, submitAnswers);
 
 /**
  * @swagger

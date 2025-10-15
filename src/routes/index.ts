@@ -9,6 +9,7 @@ import progressRoutes from './progressRoutes'
 import answerRoutes from './answerRoutes'
 import analyticsRoutes from './analyticsRoutes'
 import documentRoutes from "./documentRoutes";
+import certificateRoutes from "./certificateRoutes";
 
 const router = Router();
 
@@ -21,5 +22,6 @@ router.use("/progress", progressRoutes)
 router.use("/answers", answerRoutes)
 router.use("/stats", analyticsRoutes)
 router.use("/docs", documentRoutes)
+router.use("/certificates", certificateRoutes)
 
 export default router;

@@ -5,17 +5,15 @@ import { Users } from "../database/models/UserModel"
 import { Assessment } from "../database/models/AssessmentModel"
 import { AssessmentQuestion } from "../database/models/AssessmentQuestionModel"
 import { excludePassword } from "../utils/excludePassword"
-import { Course } from "../database/models/CourseModel"
-import { In } from "typeorm"
 import { Progress } from "../database/models/ProgressModel"
 import { sendGradingCompleteEmail } from "../services/SessionOtp"
 
-export const submitAnswer = async (req: Request, res: Response) => {
+export const submitAnswers = async (req: Request, res: Response) => {
   try {
-    const { userId, assessmentId, questionId, answer } = req.body;
+    const { userId, assessmentId, answers } = req.body;
 
-    if (!userId || !assessmentId || !questionId || answer === undefined) {
-      return res.status(400).json({ error: "Missing required fields" });
+    if (!userId || !assessmentId || !Array.isArray(answers) || answers.length === 0) {
+      return res.status(400).json({ error: "Missing or invalid fields" });
     }
 
     const userRepo = AppDataSource.getRepository(Users);
@@ -25,169 +23,144 @@ export const submitAnswer = async (req: Request, res: Response) => {
 
     const user = await userRepo.findOneBy({ id: userId });
     const assessment = await assessmentRepo.findOneBy({ id: assessmentId });
-    const question = await questionRepo.findOneBy({ id: questionId });
 
-    if (!user || !assessment || !question) {
-      return res
-        .status(404)
-        .json({ error: "Users, assessment, or question not found" });
+    if (!user || !assessment) {
+      return res.status(404).json({ error: "User or assessment not found" });
     }
 
-    // Helper: parse various stored correctAnswer formats into string[]
-    const parseCorrectAnswers = (raw: any): string[] => {
-      if (Array.isArray(raw)) return raw.map(String);
+    // 🔁 We'll process all answers in a loop
+    const processedAnswers = [];
 
-      if (typeof raw === "string") {
-        const s = raw.trim();
+    for (const { questionId, answer } of answers) {
+      if (!questionId || answer === undefined) continue;
 
-        // Try JSON first (["a","b"])
-        try {
-          const parsed = JSON.parse(s);
-          if (Array.isArray(parsed)) return parsed.map(String);
-          if (parsed !== null && parsed !== undefined) return [String(parsed)];
-        } catch (e) {
-          // not JSON — continue
-        }
+      const question = await questionRepo.findOneBy({ id: questionId });
+      if (!question) continue;
 
-        // Postgres array literal: {"a","b"} or {a,b}
-        if (s.startsWith("{") && s.endsWith("}")) {
-          const inner = s.slice(1, -1);
-          // match either "quoted items" or unquoted items separated by commas
-          const re = /"([^"]+)"|([^,]+)/g;
-          const out: string[] = [];
-          let m: RegExpExecArray | null;
-          while ((m = re.exec(inner)) !== null) {
-            const val = (m[1] || m[2] || "").trim();
-            if (val) out.push(val);
+      // ----- Parsing helpers -----
+      const parseCorrectAnswers = (raw: any): string[] => {
+        if (Array.isArray(raw)) return raw.map(String);
+        if (typeof raw === "string") {
+          const s = raw.trim();
+          try {
+            const parsed = JSON.parse(s);
+            if (Array.isArray(parsed)) return parsed.map(String);
+          } catch (_) {}
+          if (s.startsWith("{") && s.endsWith("}")) {
+            const inner = s.slice(1, -1);
+            const re = /"([^"]+)"|([^,]+)/g;
+            const out: string[] = [];
+            let m: RegExpExecArray | null;
+            while ((m = re.exec(inner)) !== null) {
+              const val = (m[1] || m[2] || "").trim();
+              if (val) out.push(val);
+            }
+            return out;
           }
-          return out;
+          return s.split(",").map((x) => x.trim()).filter(Boolean);
         }
+        return [String(raw)];
+      };
 
-        // Fallback: comma-separated string "a,b"
-        return s.split(",").map((x) => x.trim()).filter(Boolean);
-      }
-
-      // Anything else
-      return [String(raw)];
-    };
-
-    // Helper: parse submitted answer (may be array or string)
-    const parseSubmitted = (raw: any): string[] => {
-      if (Array.isArray(raw)) return raw.map(String);
-      if (typeof raw === "string") {
-        const s = raw.trim();
-        // If it's JSON array string
-        try {
-          const parsed = JSON.parse(s);
-          if (Array.isArray(parsed)) return parsed.map(String);
-        } catch (_) {}
-        // If looks like postgres array literal
-        if (s.startsWith("{") && s.endsWith("}")) {
-          const inner = s.slice(1, -1);
-          const re = /"([^"]+)"|([^,]+)/g;
-          const out: string[] = [];
-          let m: RegExpExecArray | null;
-          while ((m = re.exec(inner)) !== null) {
-            const val = (m[1] || m[2] || "").trim();
-            if (val) out.push(val);
+      const parseSubmitted = (raw: any): string[] => {
+        if (Array.isArray(raw)) return raw.map(String);
+        if (typeof raw === "string") {
+          const s = raw.trim();
+          try {
+            const parsed = JSON.parse(s);
+            if (Array.isArray(parsed)) return parsed.map(String);
+          } catch (_) {}
+          if (s.startsWith("{") && s.endsWith("}")) {
+            const inner = s.slice(1, -1);
+            const re = /"([^"]+)"|([^,]+)/g;
+            const out: string[] = [];
+            let m: RegExpExecArray | null;
+            while ((m = re.exec(inner)) !== null) {
+              const val = (m[1] || m[2] || "").trim();
+              if (val) out.push(val);
+            }
+            return out;
           }
-          return out;
+          return s.split(",").map((x) => x.trim()).filter(Boolean);
         }
-        // comma-separated
-        return s.split(",").map((x) => x.trim()).filter(Boolean);
+        return [String(raw)];
+      };
+
+      const normalize = (s: string) => s.replace(/^"(.*)"$/, "$1").trim().toLowerCase();
+
+      // ---- Evaluation -----
+      let correctAnswers = parseCorrectAnswers(question.correctAnswer);
+      if (!Array.isArray(correctAnswers)) correctAnswers = [String(correctAnswers)];
+
+      const submittedAnswers = parseSubmitted(answer);
+
+      const normCorrect = correctAnswers.map(normalize).sort();
+      const normSubmitted = submittedAnswers.map(normalize).sort();
+
+      let isCorrect = false;
+      let pointsEarned = 0;
+
+      if (question.type === "multiple_choice") {
+        if (
+          normCorrect.length === normSubmitted.length &&
+          normCorrect.every((v, i) => v === normSubmitted[i])
+        ) {
+          isCorrect = true;
+          pointsEarned = question.points;
+        }
+      } else {
+        const correctSingle = normalize(String(question.correctAnswer));
+        const submittedSingle = normalize(Array.isArray(answer) ? String(answer[0]) : String(answer));
+        if (submittedSingle === correctSingle) {
+          isCorrect = true;
+          pointsEarned = question.points;
+        }
       }
-      return [String(raw)];
-    };
 
-    // normalize: strip surrounding quotes, trim, lowercase
-    const normalize = (s: string) => s.replace(/^"(.*)"$/,'$1').trim().toLowerCase();
+      // ---- Save or update answer ----
+      let existingAnswer = await answerRepo.findOne({
+        where: {
+          user: { id: userId },
+          assessment: { id: assessmentId },
+          question: { id: questionId },
+        },
+        relations: ["user", "assessment", "question"],
+      });
 
-    // Get correct answers from question.correctAnswer
-    let correctAnswers = parseCorrectAnswers(question.correctAnswer);
-    if (!Array.isArray(correctAnswers)) correctAnswers = [String(correctAnswers)];
-
-    // Get submitted answers
-    const submittedAnswers = parseSubmitted(answer);
-
-    // For comparison: normalize and sort
-    const normCorrect = correctAnswers.map(normalize).sort();
-    const normSubmitted = submittedAnswers.map(normalize).sort();
-
-    let isCorrect = false;
-    let pointsEarned = 0;
-
-    if (question.type === "multiple_choice") {
-      // compare sets (order-insensitive)
-      if (
-        normCorrect.length === normSubmitted.length &&
-        normCorrect.every((v, i) => v === normSubmitted[i])
-      ) {
-        isCorrect = true;
-        pointsEarned = question.points;
-      }
-    } else {
-      // for other types: compare normalized single answers
-      const correctSingle = normalize(String(question.correctAnswer));
-      const submittedSingle = normalize(Array.isArray(answer) ? String(answer[0]) : String(answer));
-      if (submittedSingle === correctSingle) {
-        isCorrect = true;
-        pointsEarned = question.points;
+      if (existingAnswer) {
+        existingAnswer.answer = answer;
+        existingAnswer.isCorrect = isCorrect;
+        existingAnswer.pointsEarned = pointsEarned;
+        await answerRepo.save(existingAnswer);
+        processedAnswers.push({ ...existingAnswer, updated: true });
+      } else {
+        const newAnswer = answerRepo.create({
+          user,
+          assessment,
+          question,
+          answer,
+          isCorrect,
+          pointsEarned,
+        });
+        await answerRepo.save(newAnswer);
+        processedAnswers.push({ ...newAnswer, updated: false });
       }
     }
 
-    // 🔑 Check if this answer already exists
-    let existingAnswer = await answerRepo.findOne({
-      where: {
-        user: { id: userId },
-        assessment: { id: assessmentId },
-        question: { id: questionId },
-      },
-      relations: ["user", "assessment", "question"],
+    return res.json({
+      success: true,
+      count: processedAnswers.length,
+      answers: processedAnswers.map((a) => ({
+        ...a,
+        user: excludePassword(a.user),
+      })),
     });
-
-    if (existingAnswer) {
-      // Update existing
-      existingAnswer.answer = answer;
-      existingAnswer.isCorrect = isCorrect;
-      existingAnswer.pointsEarned = pointsEarned;
-
-      await answerRepo.save(existingAnswer);
-
-      return res.json({
-        success: true,
-        answer: {
-          ...existingAnswer,
-          user: excludePassword(existingAnswer.user),
-        },
-        updated: true,
-      });
-    } else {
-      // Create new
-      const newAnswer = answerRepo.create({
-        user,
-        assessment,
-        question,
-        answer,
-        isCorrect,
-        pointsEarned,
-      });
-
-      await answerRepo.save(newAnswer);
-
-      return res.json({
-        success: true,
-        answer: {
-          ...newAnswer,
-          user: excludePassword(newAnswer.user),
-        },
-        updated: false,
-      });
-    }
   } catch (err) {
-    console.error("Error submitting answer:", err);
-    return res.status(500).json({ error: "Failed to submit answer" });
+    console.error("Error submitting answers:", err);
+    return res.status(500).json({ error: "Failed to submit answers" });
   }
 };
+
 
 
 

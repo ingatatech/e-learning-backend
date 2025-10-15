@@ -6,6 +6,7 @@ import { Enrollment } from "./EnrollmentModel";
 import { Category } from "./CategoryModel";
 import { Review } from "./ReviewModel";
 import { Progress } from "./ProgressModel";
+import { Certificate } from "./CertificateModel";
 
 export enum CourseLevel {
   BEGINNER = "beginner",
@@ -62,6 +63,9 @@ export class Course {
 
   @OneToMany(() => Enrollment, (enrollment) => enrollment.course)
   enrollments!: Enrollment[];
+
+  @OneToMany(() => Certificate, (certificate) => certificate.user)
+  certificates!: Certificate[]
 
   @Column("int", { default: 0 })
   lessonsCount!: number

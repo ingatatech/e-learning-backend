@@ -7,6 +7,7 @@ import { Enrollment } from "./EnrollmentModel";
 import { Review } from "./ReviewModel";
 import { Progress } from "./ProgressModel";
 import { Document } from "./DocumentModel";
+import { Certificate } from "./CertificateModel";
 
 @Entity()
 export class Users {
@@ -80,6 +81,9 @@ export class Users {
 
   @OneToMany(() => Enrollment, (enrollment) => enrollment.user, { cascade: true })
   enrollments!: Enrollment[];
+
+  @OneToMany(() => Certificate, (certificate) => certificate.user)
+  certificates!: Certificate[]
 
   @Column("simple-json", { nullable: true })
   notificationSettings?: Record<string, any>;
