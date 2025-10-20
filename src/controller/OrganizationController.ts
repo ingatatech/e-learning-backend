@@ -21,7 +21,7 @@ export class OrganizationController {
   // endpoint to create an organization
 static async createOrganization(req: Request, res: Response): Promise<void> {
   try {
-    const { name, description, address, city, country, phoneNumber, website = [] } = req.body;
+    const { name, description, address, city, country, phoneNumber, website, director = [] } = req.body;
 
     const orgRepo = AppDataSource.getRepository(Organization);
 
@@ -33,6 +33,7 @@ static async createOrganization(req: Request, res: Response): Promise<void> {
       country,
       phoneNumber,
       website,
+      director,
     });
     await orgRepo.save(org);
 
@@ -80,7 +81,7 @@ static async getOrganization(req: CustomRequest, res: Response): Promise<void> {
       return;
     }
 
-    res.status(200).json({ message: 'Organization updated.', organization: org });
+    res.status(200).json({ message: 'Organization fetched.', organization: org });
   } catch (error) {
     res.status(500).json({ message: 'Something went wrong.'});
   }
@@ -134,6 +135,7 @@ static async updateOrganizationInfo(req: CustomRequest, res: Response): Promise<
       country,
       phoneNumber,
       website,
+      director,
     } = req.body;
 
     const orgRepo = AppDataSource.getRepository(Organization);
@@ -155,6 +157,7 @@ static async updateOrganizationInfo(req: CustomRequest, res: Response): Promise<
     if (country) org.country = country;
     if (phoneNumber) org.phoneNumber = phoneNumber;
     if (website) org.website = website;
+    if (director) org.director = director;
 
     await orgRepo.save(org);
 

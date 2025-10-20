@@ -32,29 +32,33 @@ export const createDocument = async (req: CustomRequest, res: Response) => {
 
 export const uploadDocumentFile = async (req: Request, res: Response) => {
   const file = req.file;
-
   if (!file) return res.status(400).json({ message: "No file uploaded" });
 
   try {
-      const allowedMimeTypes = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+    const allowedMimeTypes = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-powerpoint", // PPT
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation", 
+    ];
 
-      if (!allowedMimeTypes.includes(file.mimetype)) {
-        return res.status(400).json({ message: "Only PDF, DOC, and DOCX files are allowed" });
-      }
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      return res
+        .status(400)
+        .json({ message: "Only PDF, DOC, DOCX, PPT, and PPTX files are allowed" });
+    }
 
-
-    // Save file info to DB
     const docRepo = AppDataSource.getRepository(Document);
     const newDoc = docRepo.create({
       title: req.body.title,
       instructorId: req.body.instructorId,
       fileUrl: file.path,
       fileType: file.mimetype,
-      publicId: file.filename.trim()
+      publicId: file.filename.trim(),
     });
 
     await docRepo.save(newDoc);
-
     res.status(200).json({ message: "Document uploaded successfully", newDoc });
   } catch (err) {
     console.error(err);

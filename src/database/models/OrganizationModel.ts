@@ -38,6 +38,9 @@ export class Organization {
   @OneToMany(() => Users, user => user.organization)
   users!: Users[];
 
+  @Column({ type: 'varchar', nullable: true })
+  director?: string;
+
   @OneToMany(() => Course, course => course.organization)
   courses!: Course[];
 
