@@ -102,6 +102,7 @@ static async getOrganization(req: CustomRequest, res: Response): Promise<void> {
     const [organizations, total] = await orgRepo.findAndCount({
       skip: offset,
       take: limit,
+      relations: ["courses"],
     });
 
     const sanitized = organizations.map(org => ({
