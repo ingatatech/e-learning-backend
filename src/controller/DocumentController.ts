@@ -5,6 +5,10 @@ import { excludePassword } from "../utils/excludePassword";
 import { Not } from "typeorm";
 import { sendDocumentReviewNotification } from "../services/SessionOtp";
 import { uploadDoc } from "../services/cloudinary";
+import crypto from "crypto";
+import qs from "querystring";
+import axios from "axios";
+
 
 interface CustomRequest extends Request {
   user?: { id: number; roleName: string };
@@ -38,16 +42,15 @@ export const uploadDocumentFile = async (req: Request, res: Response) => {
         return res.status(400).json({ message: "Only PDF, DOC, and DOCX files are allowed" });
       }
 
-     const result = await uploadDoc(file.path);
-
 
     // Save file info to DB
     const docRepo = AppDataSource.getRepository(Document);
     const newDoc = docRepo.create({
       title: req.body.title,
       instructorId: req.body.instructorId,
-      fileUrl: result.secure_url,
-      fileType: file.mimetype
+      fileUrl: file.path,
+      fileType: file.mimetype,
+      publicId: file.filename.trim()
     });
 
     await docRepo.save(newDoc);
@@ -58,6 +61,64 @@ export const uploadDocumentFile = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Failed to upload document", error: err });
   }
 };
+
+export const downloadFile = async (req: CustomRequest, res: Response) => {
+  const fileId = Number(req.params.id);
+  const fileRepo = AppDataSource.getRepository(Document);
+
+  try {
+    const file = await fileRepo.findOne({ where: { id: fileId } });
+    if (!file) {
+      res.status(404).json({ message: "File not found" });
+      return;
+    }
+
+
+    // If path is a Cloudinary URL, redirect there
+    if (file.fileUrl!.startsWith("http")) {
+      const timestamp = Math.floor(Date.now() / 1000);
+      const publicId = file.publicId || file.fileUrl!.split("/").pop()?.split(".")[0];
+
+      const cloudName = process.env.CLOUDINARY_CLOUD_NAME!;
+      const apiKey = process.env.CLOUDINARY_API_KEY!;
+      const apiSecret = process.env.CLOUDINARY_API_SECRET!;
+
+      const paramsToSign = `attachment=true&public_id=${publicId}&timestamp=${timestamp}&type=upload`;
+      const signature = crypto
+        .createHash("sha1")
+        .update(paramsToSign + apiSecret)
+        .digest("hex");
+
+      const query = qs.stringify({
+        attachment: true,
+        timestamp,
+        public_id: publicId,
+        type: "upload",
+        api_key: apiKey,
+        signature,
+      });
+
+      const resourceType = "raw";
+
+
+      const downloadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/download?${query}`;
+
+      const cloudinaryResponse = await axios.get(downloadUrl, {
+        responseType: "stream",
+      });
+
+      res.setHeader("Content-Disposition", `attachment; filename="${file.title}"`);
+      res.setHeader("Content-Type", file.fileType);
+      cloudinaryResponse.data.pipe(res);
+    } else {
+      // fallback for local files (if any)
+      res.download(file.fileUrl!, file.title);
+    }
+
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+}
 
 
 export const getInstructorDocuments = async (req: CustomRequest, res: Response) => {

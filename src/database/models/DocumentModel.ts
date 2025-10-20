@@ -55,6 +55,9 @@ export class Document {
   @Column({ type: "varchar", nullable: true })
   fileType!: string;
 
+  @Column({ nullable: true }) 
+  publicId!: string;
+
   @CreateDateColumn()
   createdAt!: Date;
 

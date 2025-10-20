@@ -1,7 +1,7 @@
 
 import { Router } from "express";
 import { authenticateToken } from "../middleware/JwtParsing";
-import { changeDocumentStatus, createDocument, deleteDocument, getDocument, getInstructorDocuments, getSubmittedDocuments, submitDocument, updateDocument, uploadDocumentFile } from "../controller/DocumentController";
+import { changeDocumentStatus, createDocument, deleteDocument, downloadFile, getDocument, getInstructorDocuments, getSubmittedDocuments, submitDocument, updateDocument, uploadDocumentFile } from "../controller/DocumentController";
 import { upload } from "../middleware/multer";
 
 const router = Router();
@@ -15,6 +15,7 @@ router.delete("/:docId", authenticateToken, deleteDocument);
 router.post("/submit/:docId", authenticateToken, submitDocument);
 router.post("/change-status/:docId", authenticateToken, changeDocumentStatus);
 router.post("/upload-doc", upload.single("file"), uploadDocumentFile);
+router.get("/download-doc/:id", authenticateToken, downloadFile);
 
 /**
  * @swagger
