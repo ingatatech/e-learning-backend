@@ -1,7 +1,8 @@
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import { Request } from 'express';
-z
+import juice from 'juice';
+
 // Extend the SessionData interface to include custom properties
 declare module 'express-session' {
   interface SessionData {
