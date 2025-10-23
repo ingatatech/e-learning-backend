@@ -123,7 +123,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: isDev ? "http://localhost:8000/api/v1" : "https://e-learning-backend-v7pk.onrender.com/api/v1",
+        url: isDev ? "http://localhost:8000/api/v1" : "https://e-learning-backend-production-3563.up.railway.app/api/v1",
       },
     ],
     components: {
