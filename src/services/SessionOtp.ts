@@ -1,9 +1,9 @@
-import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import { Request } from 'express';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+
 // Extend the SessionData interface to include custom properties
 declare module 'express-session' {
   interface SessionData {
@@ -29,12 +29,11 @@ dotenv.config();
 export const generateOtp = (): string => {
   let otp = '';
   otp = Math.floor(100000 + Math.random() * 900000).toString(); // e.g. 6-digit code
-
   return otp;
 };
 
-// Send account credentials via email and
-export const sendCreds = async (email: string,lastName:string,firstName:string, req: Request, tempPassword?: string): Promise<boolean> => {
+// Send account credentials via email
+export const sendCreds = async (email: string, lastName: string, firstName: string, req: Request, tempPassword?: string): Promise<boolean> => {
   try {
     const otp = generateOtp();
 
@@ -44,23 +43,8 @@ export const sendCreds = async (email: string,lastName:string,firstName:string, 
     req.session.tempPassword = tempPassword;
     req.session.lastname = lastName;
     req.session.firstname = firstName;
-    
 
-    if (!process.env.GMAIL_USER || !process.env.GMAIL_PASSWORD) {
-      console.error("GMAIL_USER or GMAIL_PASSWORD not defined in environment variables.");
-      return false;
-    }
-
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_PASSWORD,
-      },
-    });
-
-
-const emailContent = `
+    const emailContent = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -135,36 +119,23 @@ const emailContent = `
 </html>
 `;
 
-
-
-    const mailOptions = {
-      from: process.env.GMAIL_USER,
+    await resend.emails.send({
+      from: process.env.RESEND_TEMP_EMAIL || 'onboarding@resend.dev',
       to: email,
       subject: `Welcome ${req.session.firstname} ${req.session.lastname}`,
       html: emailContent,
-    };
-
-    return new Promise<boolean>((resolve, reject) => {
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          console.error('Error sending OTP email:', error);
-          reject(false);
-        } else {
-          console.log(`OTP email sent to ${email}: ${info.response}`);
-          resolve(true);
-        }
-      });
     });
+
+    console.log(`Credentials email sent to ${email}`);
+    return true;
   } catch (error) {
-    console.error('Error sending OTP:', error);
+    console.error('Error sending credentials email:', error);
     return false;
   }
 };
 
-
 export const sendOtpEmail = async (email: string, lastName: string, firstName: string, otp: string): Promise<boolean> => {
-
-const html = `
+  const html = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -240,24 +211,11 @@ const html = `
   }
 };
 
+export const sendResetPasswordEmail = async (email: string, resetToken: string, frontendBaseUrl: string): Promise<boolean> => {
+  try {
+    const resetUrl = `${frontendBaseUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
 
-export const sendResetPasswordEmail = async (email: string, resetToken: string, frontendBaseUrl: string) => {
-  if (!process.env.GMAIL_USER || !process.env.GMAIL_PASSWORD) {
-    console.error("Missing GMAIL creds");
-    return;
-  }
-
-  const resetUrl = `${frontendBaseUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
-
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_PASSWORD,
-    },
-  });
-
-const htmlContent = `
+    const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -332,29 +290,24 @@ const htmlContent = `
 </html>
 `;
 
-  await transporter.sendMail({
-    from: process.env.GMAIL_USER,
-    to: email,
-    subject: 'Password Reset Instructions',
-    html: htmlContent,
-  });
+    await resend.emails.send({
+      from: process.env.RESEND_TEMP_EMAIL || 'onboarding@resend.dev',
+      to: email,
+      subject: 'Password Reset Instructions',
+      html: htmlContent,
+    });
+
+    console.log(`Reset password email sent to ${email}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending reset password email:', error);
+    return false;
+  }
 };
 
-export const sendPasswordResetSuccessEmail = async (email: string) => {
-if (!process.env.GMAIL_USER || !process.env.GMAIL_PASSWORD) {
-console.error("Missing GMAIL creds");
-return;
-}
-
-const transporter = nodemailer.createTransport({
-service: 'gmail',
-auth: {
-user: process.env.GMAIL_USER,
-pass: process.env.GMAIL_PASSWORD,
-},
-});
-
-const htmlContent = `
+export const sendPasswordResetSuccessEmail = async (email: string): Promise<boolean> => {
+  try {
+    const htmlContent = `
   <!DOCTYPE html>
 
   <html lang="en">
@@ -393,7 +346,7 @@ const htmlContent = `
     </div>
 
     <div style="background-color: #eaf8ea; padding: 15px; border-radius: 6px; border-left: 4px solid #28a745;">
-      <strong>Tip:</strong> If this wasn’t you, change your password again immediately or contact support below.
+      <strong>Tip:</strong> If this wasn't you, change your password again immediately or contact support below.
     </div>
   </div>
 
@@ -419,40 +372,34 @@ const htmlContent = `
   </html>
   `;
 
-await transporter.sendMail({
-from: process.env.GMAIL_USER,
-to: email,
-subject: 'Your Password Has Been Reset Successfully',
-html: htmlContent,
-});
-};
+    await resend.emails.send({
+      from: process.env.RESEND_TEMP_EMAIL || 'onboarding@resend.dev',
+      to: email,
+      subject: 'Your Password Has Been Reset Successfully',
+      html: htmlContent,
+    });
 
+    console.log(`Password reset success email sent to ${email}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending password reset success email:', error);
+    return false;
+  }
+};
 
 export const sendDocumentReviewNotification = async (
   email: string,
   status: "approved" | "rejected",
   courseTitle: string,
   reviewNotes?: string
-) => {
-  if (!process.env.GMAIL_USER || !process.env.GMAIL_PASSWORD) {
-    console.error("Missing GMAIL creds");
-    return;
-  }
+): Promise<boolean> => {
+  try {
+    const isApproved = status === "approved";
+    const mainColor = isApproved ? "#28a745" : "#dc3545"; // green for approved, red for rejected
+    const bgColor = isApproved ? "#eaf8ea" : "#f8eaea";
+    const statusText = isApproved ? "Approved" : "Rejected";
 
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_PASSWORD,
-    },
-  });
-
-  const isApproved = status === "approved";
-  const mainColor = isApproved ? "#28a745" : "#dc3545"; // green for approved, red for rejected
-  const bgColor = isApproved ? "#eaf8ea" : "#f8eaea";
-  const statusText = isApproved ? "Approved" : "Rejected";
-
-  const htmlContent = `
+    const htmlContent = `
   <!DOCTYPE html>
   <html lang="en">
   <head>
@@ -513,16 +460,20 @@ export const sendDocumentReviewNotification = async (
   </html>
   `;
 
-  await transporter.sendMail({
-    from: process.env.GMAIL_USER,
-    to: email,
-    subject: `Your course "${courseTitle}" has been ${statusText}`,
-    html: htmlContent,
-  });
+    await resend.emails.send({
+      from: process.env.RESEND_TEMP_EMAIL || 'onboarding@resend.dev',
+      to: email,
+      subject: `Your course "${courseTitle}" has been ${statusText}`,
+      html: htmlContent,
+    });
+
+    console.log(`Document review notification sent to ${email}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending document review notification:', error);
+    return false;
+  }
 };
-
-
-
 
 export const sendEnrollmentEmail = async (
   email: string,
@@ -533,19 +484,6 @@ export const sendEnrollmentEmail = async (
 ): Promise<boolean> => {
   console.log(email, firstName, lastName, courses);
   try {
-    if (!process.env.GMAIL_USER || !process.env.GMAIL_PASSWORD) {
-      console.error("GMAIL_USER or GMAIL_PASSWORD not defined in environment variables.");
-      return false;
-    }
-
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_PASSWORD,
-      },
-    });
-
     const coursesHtml = courses.map(c => `
       <li style="margin-bottom: 10px;">
         <strong>${c.title}</strong> - Instructor: ${c.instructorName}
@@ -572,30 +510,20 @@ export const sendEnrollmentEmail = async (
       </html>
     `;
 
-    const mailOptions = {
-      from: process.env.GMAIL_USER,
+    await resend.emails.send({
+      from: process.env.RESEND_TEMP_EMAIL || 'onboarding@resend.dev',
       to: email,
       subject: `You have been enrolled in a course`,
       html: emailContent,
-    };
-
-    return new Promise<boolean>((resolve, reject) => {
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          console.error('Error sending enrollment email:', error);
-          reject(false);
-        } else {
-          console.log(`Enrollment email sent to ${email}: ${info.response}`);
-          resolve(true);
-        }
-      });
     });
+
+    console.log(`Enrollment email sent to ${email}`);
+    return true;
   } catch (error) {
     console.error('Error sending enrollment email:', error);
     return false;
   }
 };
-
 
 export const sendGradingCompleteEmail = async (
   email: string,
@@ -605,19 +533,6 @@ export const sendGradingCompleteEmail = async (
   req: Request
 ): Promise<boolean> => {
   try {
-    if (!process.env.GMAIL_USER || !process.env.GMAIL_PASSWORD) {
-      console.error("GMAIL_USER or GMAIL_PASSWORD not defined in environment variables.");
-      return false;
-    }
-
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_PASSWORD,
-      },
-    });
-
     const emailContent = `
       <!DOCTYPE html>
       <html lang="en">
@@ -639,33 +554,20 @@ export const sendGradingCompleteEmail = async (
       </html>
     `;
 
-    const mailOptions = {
-      from: process.env.GMAIL_USER,
+    await resend.emails.send({
+      from: process.env.RESEND_TEMP_EMAIL || 'onboarding@resend.dev',
       to: email,
       subject: `Your assessment has been graded`,
       html: emailContent,
-    };
-
-    return new Promise<boolean>((resolve, reject) => {
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          console.error('Error sending grading complete email:', error);
-          reject(false);
-        } else {
-          console.log(`Grading complete email sent to ${email}: ${info.response}`);
-          resolve(true);
-        }
-      });
     });
+
+    console.log(`Grading complete email sent to ${email}`);
+    return true;
   } catch (error) {
     console.error('Error sending grading complete email:', error);
     return false;
   }
 };
-
-
-
-
 
 // Function to invalidate OTP for a specific email
 export const invalidateOtp = (req: Request, email: string): void => {
@@ -673,7 +575,7 @@ export const invalidateOtp = (req: Request, email: string): void => {
     delete req.session.otp;
     delete req.session.otpEmail;
     delete req.session.otpExpiry;
-    console.log(`OTP invalidated for email: ${email}`); // Add logging
+    console.log(`OTP invalidated for email: ${email}`);
   } else {
     console.log(`Email in session (${req.session.otpEmail}) does not match provided email (${email}). OTP not invalidated.`);
   }
