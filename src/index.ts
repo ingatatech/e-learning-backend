@@ -26,7 +26,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:8000', 'https://e-learning-yixk.onrender.com', 'https://e-learning-backend-v7pk.onrender.com'],
+  origin: ['http://localhost:3000', 'http://localhost:8000', 'https://e-learning-yixk.onrender.com', 'https://e-learning-backend-v7pk.onrender.com', 'https://e-learning-backend-production-3563.up.railway.app'],
   credentials: true // Enable CORS with credentials
 }));
 app.use(express.json());
