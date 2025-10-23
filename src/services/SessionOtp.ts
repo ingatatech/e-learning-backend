@@ -1,8 +1,9 @@
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import { Request } from 'express';
-import juice from 'juice';
+import { Resend } from 'resend';
 
+const resend = new Resend(process.env.RESEND_API_KEY);
 // Extend the SessionData interface to include custom properties
 declare module 'express-session' {
   interface SessionData {
@@ -163,19 +164,6 @@ const emailContent = `
 
 export const sendOtpEmail = async (email: string, lastName: string, firstName: string, otp: string): Promise<boolean> => {
 
-  if (!process.env.GMAIL_USER || !process.env.GMAIL_PASSWORD) {
-    console.error("GMAIL creds missing");
-    return false;
-  }
-
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_PASSWORD,
-    },
-  });
-
 const html = `
 <!DOCTYPE html>
 <html lang="en">
@@ -238,23 +226,18 @@ const html = `
 </html>
 `;
 
-  const mailOptions = {
-    from: process.env.GMAIL_USER,
-    to: email,
-    subject: "Your Login OTP",
-    html,
-  };
-
-  return new Promise<boolean>((resolve, reject) => {
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error("Error sending OTP email:", error);
-        reject(false);
-      } else {
-        resolve(true);
-      }
+  try {
+    await resend.emails.send({
+      from: process.env.RESEND_TEMP_EMAIL || 'onboarding@resend.dev',
+      to: email,
+      subject: 'Your Login OTP',
+      html,
     });
-  });
+    return true;
+  } catch (error) {
+    console.error('Error sending OTP email:', error);
+    return false;
+  }
 };
 
 
