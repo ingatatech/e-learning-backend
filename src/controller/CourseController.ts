@@ -7,7 +7,7 @@ import { Assessment } from "../database/models/AssessmentModel";
 import { AssessmentQuestion } from "../database/models/AssessmentQuestionModel";
 import { Users } from "../database/models/UserModel";
 import { excludePassword } from "../utils/excludePassword";
-import { uploadLessonImg, uploadToCloud } from "../services/cloudinary";
+import { uploadLessonMedia, uploadToCloud } from "../services/cloudinary";
 import { Organization } from "../database/models/OrganizationModel";
 import { Enrollment } from "../database/models/EnrollmentModel";
 import { Category } from "../database/models/CategoryModel";
@@ -215,7 +215,7 @@ export const uploadLessonImage = async (req: Request, res: Response) => {
       return;
     }
 
-    const result = await uploadLessonImg(file.path); 
+    const result = await uploadLessonMedia(file.path); 
 
     // Return the URL
     res.status(200).json({ message: "Image uploaded", imageUrl: result.secure_url });
@@ -224,6 +224,29 @@ export const uploadLessonImage = async (req: Request, res: Response) => {
   }
 }
 
+export const uploadLessonVideo = async (req: Request, res: Response) => {
+  const file = req.file;
+
+  if (!file) {
+    res.status(400).json({ message: "No file uploaded" });
+    return;
+  }
+
+  try {
+    const allowedMimeTypes = ["video/mp4", "video/webm", "video/ogg"];
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      res.status(400).json({ message: "Only image files are allowed (mp4, webm, ogg)" });
+      return;
+    }
+
+    const result = await uploadLessonMedia(file.path); 
+
+    // Return the URL
+    res.status(200).json({ message: "Video uploaded", imageUrl: result.secure_url });
+  } catch (err) {
+    res.status(500).json({ error: err });
+  }
+}
 
 export const getCourseById = async (req: Request, res: Response) => {
   const { id } = req.params

@@ -1,7 +1,7 @@
 
 import { Router } from "express";
 import { authenticateToken } from "../middleware/JwtParsing";
-import { createCourse, deleteCourse, getCourseById, getCoursesByInstructor, getCoursesByOrganization, getCoursesWithEnrollmentStatus, getDraftCoursesByOrganization, getInstructorAssessments, getLiveCoursesByInstructor, getStudentsByCourse, getStudentsByInstructor, publishCourse, updateCourse, uploadCourseThumbnail, uploadLessonImage } from "../controller/CourseController";
+import { createCourse, deleteCourse, getCourseById, getCoursesByInstructor, getCoursesByOrganization, getCoursesWithEnrollmentStatus, getDraftCoursesByOrganization, getInstructorAssessments, getLiveCoursesByInstructor, getStudentsByCourse, getStudentsByInstructor, publishCourse, updateCourse, uploadCourseThumbnail, uploadLessonImage, uploadLessonVideo } from "../controller/CourseController";
 import { hasRole } from "../middleware/RoleMiddleware";
 const router = Router();
 import { upload } from "../middleware/multer";
@@ -247,6 +247,8 @@ router.post("/upload-thumbnail", upload.single("thumbnail"), uploadCourseThumbna
 
 
 router.post("/upload-lesson-img", upload.single("lessonImg"), uploadLessonImage);
+
+router.post("/upload-lesson-vid", upload.single("lessonVid"), uploadLessonVideo);
 
 /**
  * @swagger
