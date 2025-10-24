@@ -665,6 +665,8 @@ router.post("/logout", logout);
  */
 router.post('/users/:id/profile-pic', upload.single('file'), UserClassController.uploadProfilePic);
 
+router.post('/users/:id/sign-pic', upload.single('file'), UserClassController.uploadSignature);
+
 /**
  * @swagger
  * /auth/{id}/first-login:

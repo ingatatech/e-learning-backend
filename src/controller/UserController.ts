@@ -96,7 +96,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           profilePicture: user.profilePicUrl,
           firstLogin: user.firstLogin,
           organization: user.organization,
-          twostepv: user.twostepv
+          twostepv: user.twostepv,
+          signUrl: user.signUrl,
         },
         SECRET_KEY,
         { expiresIn: "30d" }
@@ -128,7 +129,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           profilePicture: user.profilePicUrl,
           firstLogin: user.firstLogin, 
           organization: user.organization,
-          twostepv: user.twostepv
+          twostepv: user.twostepv,
+          signUrl: user.signUrl,
         }
       });
     }
@@ -231,6 +233,7 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
         firstLogin: user.firstLogin,
         organization: user.organization,
         twostepv: user.twostepv,
+        signUrl: user.signUrl,
       },
       SECRET_KEY,
       { expiresIn: "30d" }
@@ -263,6 +266,7 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
         firstLogin: user.firstLogin, 
         organization: user.organization,
         twostepv: user.twostepv,
+        signUrl: user.signUrl,
       }
     });
   } catch (err) {
@@ -319,7 +323,9 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
           streakDays: user.streakDays,
           profilePicture: user.profilePicUrl,
           firstLogin: user.firstLogin,
-          organization: user.organization
+          organization: user.organization,
+          twostepv: user.twostepv,
+          signUrl: user.signUrl,
         },
         SECRET_KEY,
         { expiresIn: "30d" }
@@ -351,7 +357,9 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
           streakDays: user.streakDays,
           profilePicture: user.profilePicUrl,
           firstLogin: user.firstLogin,
-          organization: user.organization
+          organization: user.organization,
+          twostepv: user.twostepv,
+          signUrl: user.signUrl,
         }
       });
     } catch (error) {
@@ -992,6 +1000,41 @@ static async getUsersByOrg(req: Request, res: Response): Promise<void> {
         await userRepo.save(user);
 
         res.status(200).json({ message: "Profile picture updated", profilePicUrl: user.profilePicUrl });
+      } catch (err) {
+        res.status(500).json({ error: err });
+      }
+    }
+
+    static async uploadSignature(req: CustomRequest, res: Response): Promise<void> {
+      const userId = Number(req.params.id);
+      const file = req.file;
+
+      if (!file) {
+        res.status(400).json({ message: "No file uploaded" });
+        return;
+      }
+
+      try {
+        const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp"];
+
+        if (!allowedMimeTypes.includes(file.mimetype)) {
+          res.status(400).json({ message: "Only image files are allowed (jpg, png, webp)" });
+          return;
+        }
+        const result = await uploadToCloudinary(file.path);
+
+        const userRepo = AppDataSource.getRepository(Users);
+        const user = await userRepo.findOne({ where: { id: userId } });
+
+        if (!user) {
+          res.status(404).json({ message: "Users not found" });
+          return;
+        }
+
+        user.signUrl = result.secure_url;
+        await userRepo.save(user);
+
+        res.status(200).json({ message: "Signature updated", signUrl: user.signUrl });
       } catch (err) {
         res.status(500).json({ error: err });
       }

@@ -77,6 +77,9 @@ export class Users {
   @Column({ nullable: true })
   profilePicUrl?: string;
 
+  @Column({ nullable: true })
+  signUrl?: string;
+
   @OneToMany(() => Notification, notification => notification.user, { cascade: true })
   notifications!: Notification[];
 
