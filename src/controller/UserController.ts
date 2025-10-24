@@ -33,6 +33,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const user = await userRepository.findOne({
       where: { email } });
 
+
     if (!user) {
       res.status(400).json({ message: "Invalid email." });
       return;
@@ -55,25 +56,83 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-   const otp = generateOtp(); 
-   const expiry = new Date(Date.now() + 10 * 60 * 1000);
-     
-   // Save OTP to DB
-    const otpRecord = otpRepository.create({
-      userId: user.id,
-      otpCode: otp,
-      expiresAt: expiry,
-    });
 
-    await otpRepository.save(otpRecord);
-   
-    await sendOtpEmail(user.email, user.lastName, user.firstName, otp);
+    if (user.twostepv === true) {
+      console.log("this user have two step verification");
+      const otp = generateOtp(); 
+      const expiry = new Date(Date.now() + 10 * 60 * 1000);
+        
+      // Save OTP to DB
+      const otpRecord = otpRepository.create({
+        userId: user.id,
+        otpCode: otp,
+        expiresAt: expiry,
+      });
 
+      await otpRepository.save(otpRecord);
+    
+      await sendOtpEmail(user.email, user.lastName, user.firstName, otp);
+      
+      res.status(200).json({
+        message: "OTP sent. Please verify to complete login."
+      });
+    }
+    else {
+      // Create token
+      const token = jwt.sign(
+        {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          isEmailVerified: user.isEmailVerified,
+          isActive: user.isActive,
+          preferredLanguage: user.preferredLanguage,
+          theme: user.theme,
+          totalPoints: user.totalPoints,
+          level: user.level,
+          streakDays: user.streakDays,
+          profilePicture: user.profilePicUrl,
+          firstLogin: user.firstLogin,
+          organization: user.organization,
+          twostepv: user.twostepv
+        },
+        SECRET_KEY,
+        { expiresIn: "30d" }
+      );
 
+      res.cookie("accessToken", token, {
+        httpOnly: true,
+        maxAge: COOKIE_EXPIRATION,
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        secure: process.env.NODE_ENV === "production",
+      });
 
-    res.status(200).json({
-      message: "OTP sent. Please verify to complete login."
-    });
+      res.status(200).json({
+        message: "OTP verified. Login successful.",
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          isEmailVerified: user.isEmailVerified,
+          isActive: user.isActive,
+          preferredLanguage: user.preferredLanguage,
+          theme: user.theme,
+          totalPoints: user.totalPoints,
+          level: user.level,
+          streakDays: user.streakDays,
+          profilePicture: user.profilePicUrl,
+          firstLogin: user.firstLogin, 
+          organization: user.organization,
+          twostepv: user.twostepv
+        }
+      });
+    }
+    
   } catch (error) {
     res.status(500).json({ message: "Something went wrong", error });
   }
@@ -170,7 +229,8 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
         streakDays: user.streakDays,
         profilePicture: user.profilePicUrl,
         firstLogin: user.firstLogin,
-        organization: user.organization
+        organization: user.organization,
+        twostepv: user.twostepv,
       },
       SECRET_KEY,
       { expiresIn: "30d" }
@@ -201,7 +261,8 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
         streakDays: user.streakDays,
         profilePicture: user.profilePicUrl,
         firstLogin: user.firstLogin, 
-        organization: user.organization
+        organization: user.organization,
+        twostepv: user.twostepv,
       }
     });
   } catch (err) {
@@ -324,7 +385,6 @@ import crypto from 'crypto';
 import { uploadToCloudinary } from "../services/cloudinary";
 import { getOrCreateUser } from "../utils/createUser";
 import { Organization } from "../database/models/OrganizationModel";
-import { excludePassword } from "../utils/excludePassword";
 
 
 interface CustomRequest extends Request {
@@ -416,16 +476,10 @@ static async getUsers(req: CustomRequest, res: Response): Promise<void> {
   try {
     const userRepository = AppDataSource.getRepository(Users);
 
-    const page = Number(req.query.page) || 100;
-    const limit = Number(req.query.limit) || 300;
-    const offset = (page - 1) * limit;
-
-    const [users, total] = await userRepository.findAndCount({
+    const users = await userRepository.find({
       relations: ["organization"],
-      skip: offset,
-      take: limit,
     });
-
+    console.log(users);
     const userDtos = users.map(user => ({
       id: user.id,
       firstName: user.firstName,
@@ -439,9 +493,6 @@ static async getUsers(req: CustomRequest, res: Response): Promise<void> {
 
     res.status(200).json({
       message: "Users fetched successfully",
-      page,
-      limit,
-      total,
       users: userDtos,
     });
 
@@ -785,6 +836,41 @@ static async getUsersByOrg(req: Request, res: Response): Promise<void> {
         res.status(200).json({ message: `firstLogin set to ${firstLogin}` });
       } catch (err) {
         res.status(500).json({ message: "Error updating firstLogin", error: err instanceof Error ? err.message : String(err) });
+      }
+    }
+
+    static async toggleTwoStepv(req: Request, res: Response): Promise<void> {
+      const userId = Number(req.params.id);
+      const { twostepv } = req.body;
+
+      if (typeof twostepv !== "boolean") {
+        res.status(400).json({ message: "'Two Step Verification' must be a boolean." });
+        return;
+      }
+
+      try {
+        const userRepo = AppDataSource.getRepository(Users);
+        const user = await userRepo.findOneBy({ id: userId });
+
+        if (!user) {
+          res.status(404).json({ message: "User not found." });
+          return;
+        }
+
+        user.twostepv = twostepv;
+        await userRepo.save(user);
+
+        await logActivity({
+          userId,
+          action: 'Toggled Two Step Verification',
+          targetId: userId.toString(),
+          targetType: 'Users',
+          details: `Set 2Step Verification to ${twostepv}`,
+        });
+
+        res.status(200).json({ message: `2Step Verification set to ${twostepv}` });
+      } catch (err) {
+        res.status(500).json({ message: "Error updating 2Step Verification", error: err instanceof Error ? err.message : String(err) });
       }
     }
 
