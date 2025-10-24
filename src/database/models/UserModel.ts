@@ -64,6 +64,10 @@ export class Users {
   @IsBoolean()
   firstLogin!: boolean;
 
+  @Column({ default: false })
+  @IsBoolean()
+  twostepv!: boolean;
+
   @Column({ type: 'varchar', nullable: true, length: 64 })
   resetPasswordToken?: string | null;
 

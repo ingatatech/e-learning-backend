@@ -702,6 +702,8 @@ router.post('/users/:id/profile-pic', upload.single('file'), UserClassController
  */
 router.put("/:id/first-login", authenticateToken, UserClassController.toggleFirstLogin);
 
+router.put("/:id/twostepv", authenticateToken, UserClassController.toggleTwoStepv);
+
 
 
 
