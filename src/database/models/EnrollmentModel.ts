@@ -33,6 +33,9 @@ export class Enrollment {
   @CreateDateColumn()
   enrolledAt!: Date;
 
+  @CreateDateColumn({ nullable: true })
+  completedAt!: Date | null;
+
   @UpdateDateColumn()
   updatedAt!: Date;
 }

@@ -727,6 +727,7 @@ export const getStudentsByInstructor = async (req: Request, res: Response) => {
       studentMap[user.id].courses.push({
         id: enroll.course.id,
         title: enroll.course.title,
+        level: enroll.course.level
       } as Course);
     }
 

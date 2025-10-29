@@ -12,6 +12,8 @@ import swaggerJSDoc from 'swagger-jsdoc';
 import path from "path";
 import pgSession from 'connect-pg-simple';
 import pg from 'pg';
+import { handleStripeWebhook } from "./webhooks/stripeWebhook";
+
 const { Pool } = pg;
 
 const pgPool = new Pool({
@@ -32,6 +34,12 @@ app.use(cors({
 app.use(express.json());
 app.use(morgan("dev"));
 app.use(cookieParser()); // Add cookie parser middleware
+
+app.post(
+  "/api/v1/webhook",
+  express.raw({ type: "application/json" }),
+  handleStripeWebhook
+);
 
 // Express Session
 const PgSession = pgSession(session);

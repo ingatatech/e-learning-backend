@@ -6,7 +6,7 @@ import { Users } from "../database/models/UserModel";
 import { Course } from "../database/models/CourseModel";
 import { excludePassword } from "../utils/excludePassword";
 import { getOrCreateUser } from "../utils/createUser";
-import { sendCreds, sendEnrollmentEmail } from "../services/SessionOtp";
+import { sendEnrollmentEmail } from "../services/SessionOtp";
 
 export const enrollInCourse = async (req: Request, res: Response) => {
   const { userId, courseId } = req.body;
@@ -22,23 +22,30 @@ export const enrollInCourse = async (req: Request, res: Response) => {
     const course = await courseRepo.findOne({ where: { id: courseId } });
     if (!course) return res.status(404).json({ message: "Course not found" });
 
-    // Check if already enrolled
     const existing = await enrollmentRepo.findOne({
       where: { user: { id: user.id }, course: { id: course.id } },
     });
-    if (existing) return res.status(400).json({ message: "User already enrolled in this course" });
+    if (existing)
+      return res.status(400).json({ message: "User already enrolled in this course" });
 
-    // Create enrollment
+    const enrolledAt = new Date();
+    let completedAt: Date | null = null;
+
+    // if course has duration (in hours)
+    if (course.duration && course.duration > 0) {
+      completedAt = new Date(enrolledAt.getTime() + course.duration * 60 * 60 * 1000);
+    }
+
     const enrollment = enrollmentRepo.create({
-      user,
       course,
       status: "not_started",
       progress: 0,
+      enrolledAt,
+      completedAt,
     });
 
     await enrollmentRepo.save(enrollment);
 
-    // Update enrollment count on course
     course.enrollmentCount = (course.enrollmentCount || 0) + 1;
     await courseRepo.save(course);
 
@@ -52,6 +59,7 @@ export const enrollInCourse = async (req: Request, res: Response) => {
     return res.status(500).json({ message: "Failed to enroll user" });
   }
 };
+
 
 
 export const enrollMultipleStudents = async (req: Request, res: Response) => {
@@ -153,15 +161,25 @@ export const getUserEnrollments = async (req: Request, res: Response) => {
     }
 
     // sanitize instructor info
-    const sanitized = enrollments.map((enrollment) => ({
+    const sanitized = enrollments.map((enrollment) => {
+    const { instructor, organization, ...courseData } = enrollment.course;
+
+    return {
       status: enrollment.status,
       progress: enrollment.progress,
       student: excludePassword(enrollment.user),
       enrolledAt: enrollment.enrolledAt,
-      updateAt: enrollment.updatedAt,
-      course: enrollment.course,
-      instructor: excludePassword(enrollment.course.instructor),
-    }));
+      deadline: enrollment.completedAt,
+      updatedAt: enrollment.updatedAt,
+      course: courseData,
+      instructor: {
+        id: instructor?.id,
+        firstName: instructor?.firstName,
+        lastName: instructor?.lastName,
+        email: instructor?.email,
+      },
+    };
+  });
 
     res.status(200).json({ message: "User enrollments fetched successfully", enrollments: sanitized });
   } catch (err) {

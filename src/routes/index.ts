@@ -10,6 +10,7 @@ import answerRoutes from './answerRoutes'
 import analyticsRoutes from './analyticsRoutes'
 import documentRoutes from "./documentRoutes";
 import certificateRoutes from "./certificateRoutes";
+import paymentRoutes from "./paymentRoutes";
 
 const router = Router();
 
@@ -23,5 +24,6 @@ router.use("/answers", answerRoutes)
 router.use("/stats", analyticsRoutes)
 router.use("/docs", documentRoutes)
 router.use("/certificates", certificateRoutes)
+router.use("/payments", paymentRoutes)
 
 export default router;
