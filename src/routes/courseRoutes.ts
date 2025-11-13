@@ -1,7 +1,7 @@
 
 import { Router } from "express";
 import { authenticateToken } from "../middleware/JwtParsing";
-import { createCourse, deleteCourse, getCourseById, getCoursesByInstructor, getCoursesByOrganization, getCoursesWithEnrollmentStatus, getDraftCoursesByOrganization, getInstructorAssessments, getLiveCoursesByInstructor, getStudentsByCourse, getStudentsByInstructor, publishCourse, updateCourse, uploadCourseThumbnail, uploadLessonImage, uploadLessonVideo } from "../controller/CourseController";
+import { createCourse, deleteCourse, getCourseById, getCoursesByInstructor, getCoursesByOrganization, getCoursesWithEnrollmentStatus, getDraftCoursesByOrganization, getInstructorAssessments, getLiveCoursesByInstructor, getPopularCourses, getStudentsByCourse, getStudentsByInstructor, publishCourse, updateCourse, uploadCourseThumbnail, uploadLessonImage, uploadLessonVideo } from "../controller/CourseController";
 import { hasRole } from "../middleware/RoleMiddleware";
 const router = Router();
 import { upload } from "../middleware/multer";
@@ -194,6 +194,8 @@ import { upload } from "../middleware/multer";
  *         description: Invalid input
  */
 router.post("/create", authenticateToken, hasRole(['admin', 'sysadmin', 'instructor']), createCourse);
+
+router.get("/popular", authenticateToken, getPopularCourses);
 
 router.post("/:courseId/publish", authenticateToken, publishCourse);
 
@@ -637,7 +639,6 @@ router.get("/instructor/:instructorId/live/courses", authenticateToken, getLiveC
 router.get("/organization/:orgId/courses", authenticateToken, getCoursesByOrganization);
 
 router.get("/organization/:orgId/draft/courses", authenticateToken, getDraftCoursesByOrganization);
-
 
 
 /**

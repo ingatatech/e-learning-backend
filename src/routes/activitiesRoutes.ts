@@ -1,5 +1,5 @@
 
-import e, { Router } from "express";
+import { Router } from "express";
 import { hasRole } from "../middleware/RoleMiddleware";
 import { authenticateToken } from "../middleware/JwtParsing";
 import { getAllLogs, getLogsForFile, getLogsForFolder, getLogsForUser } from "../controller/ActivityController";

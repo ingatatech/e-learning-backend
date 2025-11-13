@@ -721,14 +721,15 @@ export const getStudentsByInstructor = async (req: Request, res: Response) => {
 
     for (const enroll of enrollments) {
       const user = enroll.user;
-      if (!studentMap[user.id]) {
+      if (user && !studentMap[user.id]) {
         studentMap[user.id] = { student: user, courses: [] };
+        studentMap[user.id].courses.push({
+          id: enroll.course.id,
+          title: enroll.course.title,
+          level: enroll.course.level
+        } as Course);
       }
-      studentMap[user.id].courses.push({
-        id: enroll.course.id,
-        title: enroll.course.title,
-        level: enroll.course.level
-      } as Course);
+
     }
 
     const studentsWithCourses = Object.values(studentMap).map(entry => ({
@@ -804,6 +805,29 @@ export const getInstructorAssessments = async (req: Request, res: Response) => {
   }
 };
 
+
+export const getPopularCourses = async (req: Request, res: Response) => {
+  try {
+    const limit = Number(req.query.limit) || 20
+
+    const courseRepo = AppDataSource.getRepository(Course)
+
+    const popularCourses = await courseRepo
+      .createQueryBuilder("course")
+      .leftJoinAndSelect("course.reviews", "review")
+      .loadRelationCountAndMap("course.enrollmentCount", "course.enrollments") 
+      .addSelect("AVG(review.rating)", "averageRating")
+      .groupBy("course.id")
+      .orderBy("((AVG(review.rating) * 0.7) + (COUNT(review.id) * 0.3) + (course.enrollmentCount * 0.5))", "DESC")
+      .limit(limit)
+      .getRawMany()
+
+    return res.json({ popularCourses })
+  } catch (error) {
+    console.error("Error fetching popular courses:", error)
+    return res.status(500).json({ message: "Internal server error" })
+  }
+}
 
 
 
