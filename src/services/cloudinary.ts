@@ -27,8 +27,12 @@ export const uploadToCloud = (filePath: string): Promise<any> => {
   return cloudinary.uploader.upload(filePath, { folder: 'thumbnails' });
 };
 
-export const uploadLessonMedia = (filePath: string): Promise<any> => {
-  return cloudinary.uploader.upload(filePath, { folder: 'lessons' });
+export const uploadLessonImageToCloud = (filePath: string): Promise<any> => {
+  return cloudinary.uploader.upload(filePath, { folder: 'lessons', resource_type: 'image' });
+};
+
+export const uploadLessonVideoToCloud = (filePath: string): Promise<any> => {
+  return cloudinary.uploader.upload(filePath, { folder: 'lessons', resource_type: 'video' });
 };
 
 export const uploadDoc = (filePath: string): Promise<any> => {

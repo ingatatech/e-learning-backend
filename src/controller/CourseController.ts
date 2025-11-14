@@ -7,7 +7,7 @@ import { Assessment } from "../database/models/AssessmentModel";
 import { AssessmentQuestion } from "../database/models/AssessmentQuestionModel";
 import { Users } from "../database/models/UserModel";
 import { excludePassword } from "../utils/excludePassword";
-import { uploadLessonMedia, uploadToCloud } from "../services/cloudinary";
+import { uploadLessonImageToCloud, uploadLessonVideoToCloud, uploadToCloud } from "../services/cloudinary";
 import { Organization } from "../database/models/OrganizationModel";
 import { Enrollment } from "../database/models/EnrollmentModel";
 import { Category } from "../database/models/CategoryModel";
@@ -215,7 +215,7 @@ export const uploadLessonImage = async (req: Request, res: Response) => {
       return;
     }
 
-    const result = await uploadLessonMedia(file.path); 
+    const result = await uploadLessonImageToCloud(file.path); 
 
     // Return the URL
     res.status(200).json({ message: "Image uploaded", imageUrl: result.secure_url });
@@ -235,14 +235,14 @@ export const uploadLessonVideo = async (req: Request, res: Response) => {
   try {
     const allowedMimeTypes = ["video/mp4", "video/webm", "video/ogg"];
     if (!allowedMimeTypes.includes(file.mimetype)) {
-      res.status(400).json({ message: "Only image files are allowed (mp4, webm, ogg)" });
+      res.status(400).json({ message: "Only video files are allowed (mp4, webm, ogg)" });
       return;
     }
 
-    const result = await uploadLessonMedia(file.path); 
+    const result = await uploadLessonVideoToCloud(file.path); 
 
     // Return the URL
-    res.status(200).json({ message: "Video uploaded", imageUrl: result.secure_url });
+    res.status(200).json({ message: "Video uploaded", videoUrl: result.secure_url });
   } catch (err) {
     res.status(500).json({ error: err });
   }
@@ -264,7 +264,7 @@ export const getCourseById = async (req: Request, res: Response) => {
         "modules.lessons.assessments",
         "modules.lessons.assessments.questions",
       ],
-      order: { modules: { order: "ASC" } },
+      order: { modules: { order: "ASC", lessons: { order: "ASC"} } },
     })
 
     if (!course) return res.status(404).json({ message: "Course not found" })

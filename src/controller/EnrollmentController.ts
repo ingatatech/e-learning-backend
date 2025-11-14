@@ -38,6 +38,7 @@ export const enrollInCourse = async (req: Request, res: Response) => {
 
     const enrollment = enrollmentRepo.create({
       course,
+      user,
       status: "not_started",
       progress: 0,
       enrolledAt,
