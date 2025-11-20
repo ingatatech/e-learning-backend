@@ -1,7 +1,7 @@
 
 import { Router } from "express";
 import { authenticateToken } from "../middleware/JwtParsing";
-import { changeDocumentStatus, createDocument, deleteDocument, downloadFile, getDocument, getInstructorDocuments, getSubmittedDocuments, submitDocument, updateDocument, uploadDocumentFile } from "../controller/DocumentController";
+import { changeDocumentStatus, createDocument, deleteDocument, downloadFile, getDocument, getInstructorDocuments, getSubmittedDocuments, submitDocument, updateDocument, uploadDocumentFile, uploadDocumentMedia } from "../controller/DocumentController";
 import { upload } from "../middleware/multer";
 
 const router = Router();
@@ -9,6 +9,7 @@ const router = Router();
 router.post("/", authenticateToken, createDocument);
 router.get("/instructor/:instructorId", authenticateToken, getInstructorDocuments);
 router.get("/submitted", authenticateToken, getSubmittedDocuments);
+router.post("/upload-media", upload.single("file"), uploadDocumentMedia);
 router.get("/:docId", authenticateToken, getDocument);
 router.put("/:docId", authenticateToken, updateDocument);
 router.delete("/:docId", authenticateToken, deleteDocument);

@@ -4,10 +4,11 @@ import { Document } from "../database/models/DocumentModel";
 import { excludePassword } from "../utils/excludePassword";
 import { Not } from "typeorm";
 import { sendDocumentReviewNotification } from "../services/SessionOtp";
-import { uploadDoc } from "../services/cloudinary";
+import { uploadDoc, uploadDocImage, uploadDocVideo } from "../services/cloudinary";
 import crypto from "crypto";
 import qs from "querystring";
 import axios from "axios";
+import { DocumentMedia } from "../database/models/DocumentMediaModel";
 
 
 interface CustomRequest extends Request {
@@ -63,6 +64,38 @@ export const uploadDocumentFile = async (req: Request, res: Response) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to upload document", error: err });
+  }
+};
+
+export const uploadDocumentMedia = async (req: Request, res: Response) => {
+  const file = req.file;
+  const { id, type } = req.body; // type: "image" or "video"
+
+  if (!file) return res.status(400).json({ message: "No file uploaded" });
+  if (!id) return res.status(400).json({ message: "Document ID required" });
+
+  try {
+    const docRepo = AppDataSource.getRepository(Document);
+    const mediaRepo = AppDataSource.getRepository(DocumentMedia);
+
+    const document = await docRepo.findOne({ where: { id }});
+    if (!document) return res.status(404).json({ message: "Document not found" });
+
+    // Upload to Cloudinary
+    const result =  type === "image" ? await uploadDocImage(file.path) : await uploadDocVideo(file.path); 
+
+    const newMedia = mediaRepo.create({
+      documentId: document.id,
+      type: type || "image",
+      url: result.secure_url,
+    });
+
+    await mediaRepo.save(newMedia);
+
+    res.status(200).json({ message: "Media uploaded successfully", media: newMedia });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to upload media", error: err });
   }
 };
 

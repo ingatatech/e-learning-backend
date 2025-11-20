@@ -58,7 +58,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
 
     if (user.twostepv === true) {
-      console.log("this user have two step verification");
       const otp = generateOtp(); 
       const expiry = new Date(Date.now() + 10 * 60 * 1000);
         

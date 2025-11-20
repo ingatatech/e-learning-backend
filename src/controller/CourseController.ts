@@ -7,13 +7,15 @@ import { Assessment } from "../database/models/AssessmentModel";
 import { AssessmentQuestion } from "../database/models/AssessmentQuestionModel";
 import { Users } from "../database/models/UserModel";
 import { excludePassword } from "../utils/excludePassword";
-import { uploadLessonImageToCloud, uploadLessonVideoToCloud, uploadToCloud } from "../services/cloudinary";
+import { cloudinary, uploadLessonImageToCloud, uploadLessonVideoToCloud, uploadToCloud } from "../services/cloudinary";
 import { Organization } from "../database/models/OrganizationModel";
 import { Enrollment } from "../database/models/EnrollmentModel";
 import { Category } from "../database/models/CategoryModel";
 import { logActivity } from "../middleware/ActivityLog";
 import { In } from "typeorm";
 import parseCorrectAnswer from "../middleware/parseAnswers";
+import { DocumentMedia } from "../database/models/DocumentMediaModel";
+import { Document } from "../database/models/DocumentModel";
 export interface CustomRequest extends Request {
   user?: Users; 
 }
@@ -451,7 +453,7 @@ export const publishCourse = async (req: Request, res: Response) => {
   }
 
 
-  export const updateCourse = async (req: Request, res: Response) => {
+export const updateCourse = async (req: Request, res: Response) => {
   const courseRepo = AppDataSource.getRepository(Course);
   const moduleRepo = AppDataSource.getRepository(Module);
   const lessonRepo = AppDataSource.getRepository(Lesson);
@@ -460,7 +462,6 @@ export const publishCourse = async (req: Request, res: Response) => {
   const userRepo = AppDataSource.getRepository(Users);
   const organizationRepo = AppDataSource.getRepository(Organization);
   const categoryRepo = AppDataSource.getRepository(Category);
-
 
   const { id } = req.params;
   const { title, description, thumbnail, level, price, isPublished, duration, tags, instructorId, organizationId, categoryName, modules } = req.body;
@@ -487,7 +488,6 @@ export const publishCourse = async (req: Request, res: Response) => {
       await categoryRepo.save(category);
     };
 
-
     // Update course fields
     course.title = title ?? course.title;
     course.description = description ?? course.description;
@@ -503,8 +503,15 @@ export const publishCourse = async (req: Request, res: Response) => {
 
     await courseRepo.save(course);
 
-    // Handle modules/lessons/assessments
-    if (modules && modules.length > 0) {
+    // Handle modules/lessons/assessments with deletion logic
+    if (modules && Array.isArray(modules)) {
+      // Get IDs from request for comparison
+      const requestedModuleIds = modules.map(mod => mod.id).filter(Boolean);
+      const requestedLessonIds: string[] = [];
+      const requestedAssessmentIds: string[] = [];
+      const requestedQuestionIds: string[] = [];
+
+      // Process modules
       for (const mod of modules) {
         let newModule;
         if (mod.id) {
@@ -520,7 +527,11 @@ export const publishCourse = async (req: Request, res: Response) => {
           await moduleRepo.save(newModule);
         }
 
-        if (mod.lessons && mod.lessons.length > 0 && newModule) {
+        // Process lessons
+        if (mod.lessons && Array.isArray(mod.lessons) && newModule) {
+          const requestedLessonIdsForModule = mod.lessons.map((les: { id: any; }) => les.id).filter(Boolean);
+          requestedLessonIds.push(...requestedLessonIdsForModule);
+
           for (const les of mod.lessons) {
             let newLesson;
             if (les.id) {
@@ -538,7 +549,11 @@ export const publishCourse = async (req: Request, res: Response) => {
               await lessonRepo.save(newLesson);
             }
 
-            if (les.assessments && les.assessments.length > 0 && newLesson) {
+            // Process assessments
+            if (les.assessments && Array.isArray(les.assessments) && newLesson) {
+              const requestedAssessmentIdsForLesson = les.assessments.map((ass: { id: any; }) => ass.id).filter(Boolean);
+              requestedAssessmentIds.push(...requestedAssessmentIdsForLesson);
+
               for (const ass of les.assessments) {
                 let newAssessment;
                 if (ass.id) {
@@ -556,7 +571,11 @@ export const publishCourse = async (req: Request, res: Response) => {
                   await assessmentRepo.save(newAssessment);
                 }
 
-                if (ass.questions && ass.questions.length > 0 && newAssessment) {
+                // Process questions
+                if (ass.questions && Array.isArray(ass.questions) && newAssessment) {
+                  const requestedQuestionIdsForAssessment = ass.questions.map((q: { id: any; }) => q.id).filter(Boolean);
+                  requestedQuestionIds.push(...requestedQuestionIdsForAssessment);
+
                   for (const q of ass.questions) {
                     if (q.id) {
                       const newQuestion = await questionRepo.findOneBy({ id: q.id });
@@ -579,20 +598,96 @@ export const publishCourse = async (req: Request, res: Response) => {
           }
         }
       }
+
+      // Delete entities that are not in the request
+      // Delete questions not in request
+      if (course.modules) {
+        for (const module of course.modules) {
+          if (module.lessons) {
+            for (const lesson of module.lessons) {
+              if (lesson.assessments) {
+                for (const assessment of lesson.assessments) {
+                  if (assessment.questions) {
+                    const questionsToDelete = assessment.questions.filter(
+                      question => !requestedQuestionIds.includes(question.id)
+                    );
+                    for (const question of questionsToDelete) {
+                      await questionRepo.delete(question.id);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Delete assessments not in request
+      if (course.modules) {
+        for (const module of course.modules) {
+          if (module.lessons) {
+            for (const lesson of module.lessons) {
+              if (lesson.assessments) {
+                const assessmentsToDelete = lesson.assessments.filter(
+                  assessment => !requestedAssessmentIds.includes(assessment.id)
+                );
+                for (const assessment of assessmentsToDelete) {
+                  await assessmentRepo.delete(assessment.id);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Delete lessons not in request
+      if (course.modules) {
+        for (const module of course.modules) {
+          if (module.lessons) {
+            const lessonsToDelete = module.lessons.filter(
+              lesson => !requestedLessonIds.includes(lesson.id)
+            );
+            for (const lesson of lessonsToDelete) {
+              await lessonRepo.delete(lesson.id);
+            }
+          }
+        }
+      }
+
+      // Delete modules not in request
+      const modulesToDelete = course.modules.filter(
+        module => !requestedModuleIds.includes(module.id)
+      );
+      for (const module of modulesToDelete) {
+        await moduleRepo.delete(module.id);
+      }
+    } else {
+      // If no modules in request, delete all existing modules and their children
+      if (course.modules && course.modules.length > 0) {
+        for (const module of course.modules) {
+          await moduleRepo.delete(module.id);
+        }
+      }
     }
 
-     // Save this log in the activity log
+    // Save this log in the activity log
     await logActivity({
       userId: instructorId,
       action: "Updated a course",
       targetId: String(course.id),
       targetType: "Course",
       details: `Updated a course: ${course.title}`,
-    }); 
+    });
+
+    // Reload the course to get the updated structure
+    const updatedCourse = await courseRepo.findOne({
+      where: { id: id },
+      relations: ["modules", "modules.lessons", "modules.lessons.assessments", "modules.lessons.assessments.questions"],
+    });
 
     const sanitized = {
-      ...course,
-      instructor: excludePassword(course.instructor),
+      ...updatedCourse,
+      instructor: excludePassword(updatedCourse!.instructor),
     };
 
     res.status(200).json({ message: "Course updated successfully", course: sanitized });
