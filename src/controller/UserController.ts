@@ -31,7 +31,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const otpRepository = AppDataSource.getRepository(Otp);
 
     const user = await userRepository.findOne({
-      where: { email } });
+      where: { email }, relations: ["organization"],});
 
 
     if (!user) {
@@ -486,7 +486,6 @@ static async getUsers(req: CustomRequest, res: Response): Promise<void> {
     const users = await userRepository.find({
       relations: ["organization"],
     });
-    console.log(users);
     const userDtos = users.map(user => ({
       id: user.id,
       firstName: user.firstName,
