@@ -1,6 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn, OneToOne } from "typeorm";
 import { Course } from "./CourseModel";
 import { Lesson } from "./LessonModel";
+import { Assessment } from "./AssessmentModel";
+import { ModuleFinal } from "./ModuleFinal";
 
 @Entity()
 export class Module {
@@ -21,6 +23,10 @@ export class Module {
 
   @OneToMany(() => Lesson, (lesson) => lesson.module)
   lessons!: Lesson[];
+
+  @OneToOne(() => ModuleFinal, (final) => final.module)
+  final!: ModuleFinal;
+
 
   @CreateDateColumn()
   createdAt!: Date;
