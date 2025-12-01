@@ -7,10 +7,12 @@ export class ModuleFinal {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @OneToOne(() => Module, (module) => module.final, { onDelete: "CASCADE" })
-    @JoinColumn()
-    module!: Module;
+  @Column()
+  title!: string;
 
+  @OneToOne(() => Module, (module) => module.final, { onDelete: "CASCADE" })
+  @JoinColumn()
+  module!: Module;
 
   @Column({
     type: "enum",
@@ -25,6 +27,15 @@ export class ModuleFinal {
   // Only used if type = project
   @Column({ type: "text", nullable: true })
   instructions?: string;
+
+  @Column("int")
+  passingScore!: number;
+
+  @Column("int", { nullable: true })
+  timeLimit!: number | null;
+
+  @Column({ default: false })
+  fileRequired!: boolean;
 
   @CreateDateColumn()
   createdAt!: Date;

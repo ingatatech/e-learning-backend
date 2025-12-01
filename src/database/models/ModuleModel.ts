@@ -27,6 +27,8 @@ export class Module {
   @OneToOne(() => ModuleFinal, (final) => final.module)
   final!: ModuleFinal;
 
+  @OneToMany(() => Assessment, (assessment) => assessment.lesson)
+  assessments!: Assessment[];
 
   @CreateDateColumn()
   createdAt!: Date;

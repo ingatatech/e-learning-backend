@@ -2,11 +2,13 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDat
 import { Lesson } from "./LessonModel";
 import { Course } from "./CourseModel";
 import { AssessmentQuestion } from "./AssessmentQuestionModel";
+import { Module } from "./ModuleModel";
 
 export enum AssessmentType {
   QUIZ = "quiz",
   ASSIGNMENT = "assignment",
   PROJECT = "project",
+  ASSESSMENT = "assessment",
 }
 
 @Entity()
@@ -34,6 +36,9 @@ export class Assessment {
 
   @ManyToOne(() => Course, (course) => course.modules, { nullable: true, onDelete: "CASCADE" })
   course!: Course | null;
+
+  @ManyToOne(() => Module, (module) => module.assessments, { nullable: true, onDelete: "CASCADE" })
+  module!: Module | null;
 
   @OneToMany(() => AssessmentQuestion, (question) => question.assessment, { cascade: true })
   questions!: AssessmentQuestion[];

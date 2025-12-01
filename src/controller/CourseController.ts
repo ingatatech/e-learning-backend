@@ -16,6 +16,7 @@ import { In } from "typeorm";
 import parseCorrectAnswer from "../middleware/parseAnswers";
 import { DocumentMedia } from "../database/models/DocumentMediaModel";
 import { Document } from "../database/models/DocumentModel";
+import { ModuleFinal } from "../database/models/ModuleFinal";
 export interface CustomRequest extends Request {
   user?: Users; 
 }
@@ -28,6 +29,7 @@ export const createCourse = async (req: Request, res: Response) => {
   const questionRepo = AppDataSource.getRepository(AssessmentQuestion);
   const userRepo = AppDataSource.getRepository(Users);
   const categoryRepo = AppDataSource.getRepository(Category);
+  const moduleFinalRepo = AppDataSource.getRepository(ModuleFinal);
 
   const {
     title,
@@ -154,6 +156,58 @@ export const createCourse = async (req: Request, res: Response) => {
             }
           }
         }
+
+        // FINAL ASSESSMENT FOR MODULE
+        if (mod.finalAssessment) {
+          const finalData = mod.finalAssessment;
+
+          const finalObj = moduleFinalRepo.create({
+            type: finalData.type,              // "assessment" | "project"
+            title: finalData.title,
+            instructions: finalData.instructions || null,
+            passingScore: finalData.passingScore || null,
+            timeLimit: finalData.timeLimit || null,
+            fileRequired: finalData.fileRequired || false,
+            module: newModule
+          });
+
+          await moduleFinalRepo.save(finalObj);
+
+          // Handle assessment questions ONLY when type is assessment
+          if (finalData.type === "assessment") {
+          const finalAssessment = assessmentRepo.create({
+            title: finalData.title,
+            description: finalData.description,
+            type: finalData.type,
+            passingScore: finalData.passingScore,
+            timeLimit: finalData.timeLimit,
+            course,
+            module: newModule,
+          });
+
+          await assessmentRepo.save(finalAssessment);
+
+          // attach assessment to ModuleFinal
+          finalObj.assessment = finalAssessment;
+          await moduleFinalRepo.save(finalObj);
+
+          // Now save questions correctly
+          for (const q of finalData.questions) {
+            const newQ = questionRepo.create({
+              question: q.question,
+              type: q.type,
+              options: q.options,
+              correctAnswer: q.correctAnswer,
+              points: q.points,
+              assessment: finalAssessment
+            });
+
+            await questionRepo.save(newQ);
+          }
+        }
+
+        }
+
       }
     }
 
