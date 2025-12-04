@@ -8,7 +8,7 @@ export class ModuleFinalSubmission {
   id!: number;
 
   @ManyToOne(() => ModuleFinal, { onDelete: "CASCADE" })
-  final!: ModuleFinal;
+  finalAssessment!: ModuleFinal;
 
   @Column("int")
   userId!: number;

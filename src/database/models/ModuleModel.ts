@@ -24,8 +24,8 @@ export class Module {
   @OneToMany(() => Lesson, (lesson) => lesson.module)
   lessons!: Lesson[];
 
-  @OneToOne(() => ModuleFinal, (final) => final.module)
-  final!: ModuleFinal;
+  @OneToOne(() => ModuleFinal, (finalAssessment) => finalAssessment.module)
+  finalAssessment!: ModuleFinal;
 
   @OneToMany(() => Assessment, (assessment) => assessment.lesson)
   assessments!: Assessment[];

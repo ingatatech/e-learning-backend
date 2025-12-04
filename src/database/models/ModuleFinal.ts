@@ -10,7 +10,7 @@ export class ModuleFinal {
   @Column()
   title!: string;
 
-  @OneToOne(() => Module, (module) => module.final, { onDelete: "CASCADE" })
+  @OneToOne(() => Module, (module) => module.finalAssessment, { onDelete: "CASCADE" })
   @JoinColumn()
   module!: Module;
 
@@ -21,7 +21,7 @@ export class ModuleFinal {
   type!: "assessment" | "project";
 
   // Only used if type = assessment
-  @ManyToOne(() => Assessment, { nullable: true })
+  @ManyToOne(() => Assessment, { nullable: true, onDelete: "CASCADE" })
   assessment?: Assessment;
 
   // Only used if type = project

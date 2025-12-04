@@ -7,15 +7,13 @@ import { Assessment } from "../database/models/AssessmentModel";
 import { AssessmentQuestion } from "../database/models/AssessmentQuestionModel";
 import { Users } from "../database/models/UserModel";
 import { excludePassword } from "../utils/excludePassword";
-import { cloudinary, uploadLessonImageToCloud, uploadLessonVideoToCloud, uploadToCloud } from "../services/cloudinary";
+import { uploadLessonImageToCloud, uploadLessonVideoToCloud, uploadToCloud } from "../services/cloudinary";
 import { Organization } from "../database/models/OrganizationModel";
 import { Enrollment } from "../database/models/EnrollmentModel";
 import { Category } from "../database/models/CategoryModel";
 import { logActivity } from "../middleware/ActivityLog";
 import { In } from "typeorm";
 import parseCorrectAnswer from "../middleware/parseAnswers";
-import { DocumentMedia } from "../database/models/DocumentMediaModel";
-import { Document } from "../database/models/DocumentModel";
 import { ModuleFinal } from "../database/models/ModuleFinal";
 export interface CustomRequest extends Request {
   user?: Users; 
@@ -319,6 +317,9 @@ export const getCourseById = async (req: Request, res: Response) => {
         "modules.lessons",
         "modules.lessons.assessments",
         "modules.lessons.assessments.questions",
+        "modules.finalAssessment",
+        "modules.finalAssessment.assessment",
+        "modules.finalAssessment.assessment.questions",
       ],
       order: { modules: { order: "ASC", lessons: { order: "ASC"} } },
     })
@@ -516,21 +517,33 @@ export const updateCourse = async (req: Request, res: Response) => {
   const userRepo = AppDataSource.getRepository(Users);
   const organizationRepo = AppDataSource.getRepository(Organization);
   const categoryRepo = AppDataSource.getRepository(Category);
+  const moduleFinalRepo = AppDataSource.getRepository(ModuleFinal); // Add this
 
   const { id } = req.params;
-  const { title, description, thumbnail, level, price, isPublished, duration, tags, instructorId, organizationId, categoryName, modules } = req.body;
+  const { 
+    title, description, thumbnail, level, price, isPublished, duration, tags, 
+    instructorId, organizationId, categoryName, modules, certificateIncluded,
+    language, about, whatYouWillLearn, requirements 
+  } = req.body;
 
   try {
+    // Add ModuleFinal relations to the query
     const course = await courseRepo.findOne({
       where: { id: id },
-      relations: ["modules", "modules.lessons", "modules.lessons.assessments", "modules.lessons.assessments.questions"],
+      relations: [
+        "modules", 
+        "modules.lessons", 
+        "modules.lessons.assessments", 
+        "modules.lessons.assessments.questions",
+        "modules.finalAssessment", 
+        "modules.finalAssessment.assessment", 
+        "modules.finalAssessment.assessment.questions" 
+      ],
     });
+    
     if (!course) return res.status(404).json({ message: "Course not found" });
 
     const instructor = await userRepo.findOneBy({ id: Number(instructorId) });
-    if (!instructor || !["instructor", "admin"].includes(instructor.role)) {
-      return res.status(400).json({ message: "Instructor not found or user is not an instructor" });
-    }
 
     // Optional: organization check
     const organization = organizationId ? await organizationRepo.findOneBy({ id: Number(organizationId) }) : null;
@@ -542,7 +555,7 @@ export const updateCourse = async (req: Request, res: Response) => {
       await categoryRepo.save(category);
     };
 
-    // Update course fields
+    // Update course fields with new fields
     course.title = title ?? course.title;
     course.description = description ?? course.description;
     course.thumbnail = thumbnail ?? course.thumbnail;
@@ -551,11 +564,22 @@ export const updateCourse = async (req: Request, res: Response) => {
     course.isPublished = isPublished ?? course.isPublished;
     course.duration = duration ?? course.duration;
     course.tags = tags ?? course.tags;
-    course.instructor = instructor;
+    course.instructor = instructor ?? course.instructor;
+    course.certificateIncluded = certificateIncluded ?? course.certificateIncluded;
+    course.language = language ?? course.language;
+    course.about = about ?? course.about;
+    course.whatYouWillLearn = whatYouWillLearn ?? course.whatYouWillLearn;
+    course.requirements = requirements ?? course.requirements;
+    
     if (organization) course.organization = organization;
     if (category) course.category = category;
 
     await courseRepo.save(course);
+
+    // Update lesson counts
+    let totalLessons = 0;
+    let totalProjects = 0;
+    let totalExercises = 0;
 
     // Handle modules/lessons/assessments with deletion logic
     if (modules && Array.isArray(modules)) {
@@ -564,6 +588,7 @@ export const updateCourse = async (req: Request, res: Response) => {
       const requestedLessonIds: string[] = [];
       const requestedAssessmentIds: string[] = [];
       const requestedQuestionIds: string[] = [];
+      const requestedModuleFinalIds: string[] = [];
 
       // Process modules
       for (const mod of modules) {
@@ -577,9 +602,170 @@ export const updateCourse = async (req: Request, res: Response) => {
             await moduleRepo.save(newModule);
           }
         } else {
-          newModule = moduleRepo.create({ ...mod, course });
+          const q = {...mod};
+          delete q.id;
+          newModule = moduleRepo.create({ ...q, course });
           await moduleRepo.save(newModule);
         }
+
+        // ========== HANDLE MODULE FINAL ASSESSMENT ==========
+        if (mod.finalAssessment && newModule) {
+          requestedModuleFinalIds.push(mod.finalAssessment.id || ''); 
+
+           // ALWAYS check if this module already has a final assessment
+          let moduleFinal = await moduleFinalRepo.findOne({
+            where: { module: { id: (newModule as any).id } },
+            relations: ['assessment', 'assessment.questions']
+          });
+          
+          if (moduleFinal) {
+            // Update existing module final
+            moduleFinal.type = mod.finalAssessment.type ?? moduleFinal.type;
+            moduleFinal.title = mod.finalAssessment.title ?? moduleFinal.title;
+            moduleFinal.instructions = mod.finalAssessment.instructions ?? moduleFinal.instructions;
+            moduleFinal.passingScore = mod.finalAssessment.passingScore ?? moduleFinal.passingScore;
+            moduleFinal.timeLimit = mod.finalAssessment.timeLimit ?? moduleFinal.timeLimit;
+            moduleFinal.fileRequired = mod.finalAssessment.fileRequired ?? moduleFinal.fileRequired;
+            
+            await moduleFinalRepo.save(moduleFinal);
+            
+            // Handle assessment type specifically
+            if (mod.finalAssessment.type === "assessment" && moduleFinal.assessment) {
+              // Update existing assessment
+              const assessment = moduleFinal.assessment;
+              assessment.title = mod.finalAssessment.title ?? assessment.title;
+              assessment.description = mod.finalAssessment.description ?? assessment.description;
+              assessment.type = mod.finalAssessment.type ?? assessment.type;
+              assessment.passingScore = mod.finalAssessment.passingScore ?? assessment.passingScore;
+              assessment.timeLimit = mod.finalAssessment.timeLimit ?? assessment.timeLimit;
+              
+              await assessmentRepo.save(assessment);
+              
+              // Handle questions - similar to regular assessments
+              if (mod.finalAssessment.questions && Array.isArray(mod.finalAssessment.questions)) {
+                const requestedQuestionIdsForFinal = mod.finalAssessment.questions.map((q: { id: any; }) => q.id).filter(Boolean);
+                
+                for (const q of mod.finalAssessment.questions) {
+                  if (q.id) {
+                    const existingQuestion = await questionRepo.findOneBy({ id: q.id });
+                    if (existingQuestion) {
+                      existingQuestion.question = q.question ?? existingQuestion.question;
+                      existingQuestion.type = q.type ?? existingQuestion.type;
+                      existingQuestion.options = q.options ?? existingQuestion.options;
+                      existingQuestion.correctAnswer = q.correctAnswer ?? existingQuestion.correctAnswer;
+                      existingQuestion.points = q.points ?? existingQuestion.points;
+                      await questionRepo.save(existingQuestion);
+                    }
+                  } else {
+                    delete q.id;
+                    const newQuestion = questionRepo.create({ 
+                      ...q, 
+                      assessment: assessment 
+                    });
+                    await questionRepo.save(newQuestion);
+                  }
+                }
+                
+                // Delete questions not in request
+                if (assessment.questions) {
+                  const questionsToDelete = assessment.questions.filter(
+                    question => !requestedQuestionIdsForFinal.includes(question.id)
+                  );
+                  for (const question of questionsToDelete) {
+                    await questionRepo.delete(question.id);
+                  }
+                }
+              }
+            } else if (mod.finalAssessment.type === "assessment" && !moduleFinal.assessment) {
+              // Create new assessment for existing module final
+              delete mod.finalAssessment.id;
+              const newAssessment = assessmentRepo.create({
+                title: mod.finalAssessment.title,
+                description: mod.finalAssessment.description,
+                type: mod.finalAssessment.type,
+                passingScore: mod.finalAssessment.passingScore,
+                timeLimit: mod.finalAssessment.timeLimit,
+                course,
+                module: newModule as any,
+              });
+              
+              
+              await assessmentRepo.save(newAssessment);
+              
+              // Link assessment to module final
+              moduleFinal.assessment = newAssessment;
+              await moduleFinalRepo.save(moduleFinal);
+              
+              // Create questions
+              if (mod.finalAssessment.questions && Array.isArray(mod.finalAssessment.questions)) {
+                for (const q of mod.finalAssessment.questions) {
+                  delete q.id;
+                  const newQuestion = questionRepo.create({
+                    question: q.question,
+                    type: q.type,
+                    options: q.options,
+                    correctAnswer: q.correctAnswer,
+                    points: q.points,
+                    assessment: newAssessment
+                  });
+                  await questionRepo.save(newQuestion);
+                }
+              }
+            }
+          } else {
+            // Create new module final
+            delete mod.finalAssessment.id;
+            const finalObj = moduleFinalRepo.create({
+              type: mod.finalAssessment.type,
+              title: mod.finalAssessment.title,
+              instructions: mod.finalAssessment.instructions || null,
+              passingScore: mod.finalAssessment.passingScore || null,
+              timeLimit: mod.finalAssessment.timeLimit || null,
+              fileRequired: mod.finalAssessment.fileRequired || false,
+              module: newModule as any
+            });
+            
+            await moduleFinalRepo.save(finalObj);
+            
+            // Handle assessment questions if type is assessment
+            if (mod.finalAssessment.type === "assessment") {
+              delete mod.finalAssessment.id;
+              const finalAssessment = assessmentRepo.create({
+                title: mod.finalAssessment.title,
+                description: mod.finalAssessment.description,
+                type: mod.finalAssessment.type,
+                passingScore: mod.finalAssessment.passingScore,
+                timeLimit: mod.finalAssessment.timeLimit,
+                course,
+                module: newModule as any,
+              });
+              
+              await assessmentRepo.save(finalAssessment);
+              
+              // Attach assessment to ModuleFinal
+              finalObj.assessment = finalAssessment;
+              await moduleFinalRepo.save(finalObj);
+              
+              // Create questions
+              for (const q of mod.finalAssessment.questions) {
+                delete q.id;
+                const newQ = questionRepo.create({
+                  question: q.question,
+                  type: q.type,
+                  options: q.options,
+                  correctAnswer: q.correctAnswer,
+                  points: q.points,
+                  assessment: finalAssessment
+                });
+                await questionRepo.save(newQ);
+              }
+            }
+          }
+        } else if (newModule && (newModule as Module).finalAssessment) {
+          // If no finalAssessment in request but exists in DB, delete it
+          requestedModuleFinalIds.push('');
+        }
+        // ========== END MODULE FINAL HANDLING ==========
 
         // Process lessons
         if (mod.lessons && Array.isArray(mod.lessons) && newModule) {
@@ -596,10 +782,30 @@ export const updateCourse = async (req: Request, res: Response) => {
                 newLesson.videoUrl = les.videoUrl ?? newLesson.videoUrl;
                 newLesson.duration = les.duration ?? newLesson.duration;
                 newLesson.order = les.order ?? newLesson.order;
+                newLesson.isProject = !!les.isProject;
+                newLesson.isExercise = !!les.isExercise;
+                
+                // Handle resources
+                const resourcesJson = les.resources && les.resources.length > 0 
+                  ? JSON.stringify(les.resources) 
+                  : null;
+                newLesson.resources = resourcesJson;
+                
                 await lessonRepo.save(newLesson);
               }
             } else {
-              newLesson = lessonRepo.create({ ...les, module: newModule });
+              const resourcesJson = les.resources && les.resources.length > 0 
+                ? JSON.stringify(les.resources) 
+                : null;
+                
+              delete les.id;
+              newLesson = lessonRepo.create({ 
+                ...les, 
+                module: newModule,
+                isProject: !!les.isProject,
+                isExercise: !!les.isExercise,
+                resources: resourcesJson
+              });
               await lessonRepo.save(newLesson);
             }
 
@@ -621,6 +827,7 @@ export const updateCourse = async (req: Request, res: Response) => {
                     await assessmentRepo.save(newAssessment);
                   }
                 } else {
+                  delete ass.id;
                   newAssessment = assessmentRepo.create({ ...ass, lesson: newLesson, course });
                   await assessmentRepo.save(newAssessment);
                 }
@@ -642,6 +849,7 @@ export const updateCourse = async (req: Request, res: Response) => {
                         await questionRepo.save(newQuestion);
                       }
                     } else {
+                      delete q.id;
                       const newQuestion = questionRepo.create({ ...q, assessment: newAssessment });
                       await questionRepo.save(newQuestion);
                     }
@@ -724,6 +932,12 @@ export const updateCourse = async (req: Request, res: Response) => {
       }
     }
 
+    // Update course lesson counts
+    course.lessonsCount = totalLessons;
+    course.projectsCount = totalProjects;
+    course.exercisesCount = totalExercises;
+    await courseRepo.save(course);
+
     // Save this log in the activity log
     await logActivity({
       userId: instructorId,
@@ -733,10 +947,18 @@ export const updateCourse = async (req: Request, res: Response) => {
       details: `Updated a course: ${course.title}`,
     });
 
-    // Reload the course to get the updated structure
+    // Reload the course to get the updated structure with module finals
     const updatedCourse = await courseRepo.findOne({
       where: { id: id },
-      relations: ["modules", "modules.lessons", "modules.lessons.assessments", "modules.lessons.assessments.questions"],
+      relations: [
+        "modules", 
+        "modules.lessons", 
+        "modules.lessons.assessments", 
+        "modules.lessons.assessments.questions",
+        "modules.finalAssessment",
+        "modules.finalAssessment.assessment",
+        "modules.finalAssessment.assessment.questions"
+      ],
     });
 
     const sanitized = {
