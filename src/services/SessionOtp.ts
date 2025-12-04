@@ -149,7 +149,6 @@ const emailContent = `
           console.error('Error sending OTP email:', error);
           reject(false);
         } else {
-          console.log(`OTP email sent to ${email}: ${info.response}`);
           resolve(true);
         }
       });
@@ -548,7 +547,6 @@ export const sendEnrollmentEmail = async (
   courses: CourseInfo[],
   req: Request
 ): Promise<boolean> => {
-  console.log(email, firstName, lastName, courses);
   try {
     if (!process.env.GMAIL_USER || !process.env.GMAIL_PASSWORD) {
       console.error("GMAIL_USER or GMAIL_PASSWORD not defined in environment variables.");
@@ -602,7 +600,6 @@ export const sendEnrollmentEmail = async (
           console.error('Error sending enrollment email:', error);
           reject(false);
         } else {
-          console.log(`Enrollment email sent to ${email}: ${info.response}`);
           resolve(true);
         }
       });
@@ -669,7 +666,6 @@ export const sendGradingCompleteEmail = async (
           console.error('Error sending grading complete email:', error);
           reject(false);
         } else {
-          console.log(`Grading complete email sent to ${email}: ${info.response}`);
           resolve(true);
         }
       });
@@ -690,8 +686,5 @@ export const invalidateOtp = (req: Request, email: string): void => {
     delete req.session.otp;
     delete req.session.otpEmail;
     delete req.session.otpExpiry;
-    console.log(`OTP invalidated for email: ${email}`); // Add logging
-  } else {
-    console.log(`Email in session (${req.session.otpEmail}) does not match provided email (${email}). OTP not invalidated.`);
   }
 };

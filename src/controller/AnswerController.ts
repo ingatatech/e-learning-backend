@@ -285,7 +285,6 @@ export const gradeAssessmentManually = async (req: Request, res: Response) => {
 
     // Update each answer with pointsEarned
     for (const graded of gradedAnswers) {
-      console.log(graded)
       await answerRepo.update(
         { id: graded.answerId, user: { id: studentId } },
         { pointsEarned: graded.pointsEarned }

@@ -320,6 +320,7 @@ export const getCourseById = async (req: Request, res: Response) => {
         "modules.finalAssessment",
         "modules.finalAssessment.assessment",
         "modules.finalAssessment.assessment.questions",
+        "reviews"
       ],
       order: { modules: { order: "ASC", lessons: { order: "ASC"} } },
     })

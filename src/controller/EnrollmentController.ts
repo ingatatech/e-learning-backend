@@ -153,7 +153,7 @@ export const getUserEnrollments = async (req: Request, res: Response) => {
   try {
     const enrollments = await enrollmentRepo.find({
       where: { user: { id: Number(userId) } },
-      relations: ["course", "course.instructor", "course.organization"],
+      relations: ["course", "course.instructor", "course.organization", "course.reviews"],
       order: { enrolledAt: "DESC" },
     });
 

@@ -71,7 +71,6 @@ export const confirmPayment = async (req: Request, res: Response) => {
     // Optional: trigger course enrollment or activation if succeeded
     if (newStatus === "succeeded") {
       // TODO: call your enrollment activation logic here
-      console.log(`Enroll user ${userId} to course ${courseId}`);
     }
 
     return res.json({ message: "Payment confirmed", payment });
