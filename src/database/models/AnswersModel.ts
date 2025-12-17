@@ -11,10 +11,10 @@ export class Answer {
   @ManyToOne(() => Users)
   user!: Users
 
-  @ManyToOne(() => Assessment)
+  @ManyToOne(() => Assessment, (assessment) => assessment.answers, { onDelete: "CASCADE" })
   assessment!: Assessment
 
-  @ManyToOne(() => AssessmentQuestion)
+  @ManyToOne(() => AssessmentQuestion, (question) => question.answers, { onDelete: "CASCADE" })
   question!: AssessmentQuestion
 
   @Column("simple-json")

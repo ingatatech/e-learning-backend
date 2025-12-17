@@ -12,6 +12,7 @@ import documentRoutes from "./documentRoutes";
 import certificateRoutes from "./certificateRoutes";
 import paymentRoutes from "./paymentRoutes";
 import reviewsRoutes from "./reviewsRoutes";
+import categoryRoutes from "./categoryRoutes"
 
 const router = Router();
 
@@ -27,5 +28,6 @@ router.use("/docs", documentRoutes)
 router.use("/certificates", certificateRoutes)
 router.use("/payments", paymentRoutes)
 router.use("/reviews", reviewsRoutes)
+router.use("/categories", categoryRoutes)
 
 export default router;

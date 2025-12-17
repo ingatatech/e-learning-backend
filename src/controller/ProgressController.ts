@@ -23,7 +23,7 @@ export const getUserProgress = async (req: Request, res: Response) => {
 
     // Map to completedSteps
     const completedSteps = progressRows.map((row) => ({
-      dbId: row.id,
+      dbId: row.lessonId || row.assessmentId,
       lessonId: row.lessonId || null,
       assessmentId: row.assessmentId || null,
       isCompleted: row.isCompleted,

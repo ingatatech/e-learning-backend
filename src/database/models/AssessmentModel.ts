@@ -3,6 +3,7 @@ import { Lesson } from "./LessonModel";
 import { Course } from "./CourseModel";
 import { AssessmentQuestion } from "./AssessmentQuestionModel";
 import { Module } from "./ModuleModel";
+import { Answer } from "./AnswersModel";
 
 export enum AssessmentType {
   QUIZ = "quiz",
@@ -42,6 +43,9 @@ export class Assessment {
 
   @OneToMany(() => AssessmentQuestion, (question) => question.assessment, { cascade: true })
   questions!: AssessmentQuestion[];
+
+  @OneToMany(() => Answer, (answer) => answer.assessment, { cascade: true })
+  answers!: Answer[];
 
   @CreateDateColumn()
   createdAt!: Date;

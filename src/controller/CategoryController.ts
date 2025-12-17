@@ -46,7 +46,6 @@ export const getCategoryById = async (req: Request, res: Response) => {
   try {
     const category = await categoryRepo.findOne({
       where: { id: Number(id) },
-      relations: ["courses"],
     });
 
     if (!category) {

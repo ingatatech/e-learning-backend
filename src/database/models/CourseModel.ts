@@ -58,7 +58,7 @@ export class Course {
   @ManyToOne(() => Organization, (org) => org.courses, { nullable: true, onDelete: "SET NULL" })
   organization!: Organization | null;
 
-  @OneToMany(() => Module, (module) => module.course, { onDelete: "CASCADE" })
+  @OneToMany(() => Module, (module) => module.course, { cascade: true })
   modules!: Module[];
 
   @OneToMany(() => Enrollment, (enrollment) => enrollment.course)

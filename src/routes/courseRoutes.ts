@@ -1,7 +1,7 @@
 
 import { Router } from "express";
 import { authenticateToken } from "../middleware/JwtParsing";
-import { createCourse, deleteCourse, getCourseById, getCoursesByInstructor, getCoursesByOrganization, getCoursesWithEnrollmentStatus, getDraftCoursesByOrganization, getInstructorAssessments, getLiveCoursesByInstructor, getPopularCourses, getStudentsByCourse, getStudentsByInstructor, publishCourse, updateCourse, uploadCourseThumbnail, uploadLessonImage, uploadLessonVideo } from "../controller/CourseController";
+import { createCourse, deleteAssessment, deleteCourse, deleteLesson, deleteModule, getCourseById, getCoursesByInstructor, getCoursesByOrganization, getCoursesWithEnrollmentStatus, getDraftCoursesByOrganization, getInstructorAssessments, getLiveCoursesByInstructor, getPopularCourses, getStudentsByCourse, getStudentsByInstructor, publishCourse, updateCourse, updateCourseModules, uploadCourseThumbnail, uploadLessonImage, uploadLessonVideo } from "../controller/CourseController";
 import { hasRole } from "../middleware/RoleMiddleware";
 const router = Router();
 import { upload } from "../middleware/multer";
@@ -763,6 +763,7 @@ router.get("/organization/:orgId/draft/courses", authenticateToken, getDraftCour
  *         description: Server error
  */
 router.put("/update/:id", authenticateToken, updateCourse);
+router.put("/update-modules/:id", authenticateToken, updateCourseModules);
 
 
 /**
@@ -859,5 +860,9 @@ router.delete("/delete/:id", authenticateToken, deleteCourse);
  */
 router.post("/enrollment-status", getCoursesWithEnrollmentStatus);
 
+
+router.delete("/lesson/:id", authenticateToken, deleteLesson);
+router.delete("/assessment/:id", authenticateToken, deleteAssessment);
+router.delete("/module/:id", authenticateToken, deleteModule);
 
 export default router;
