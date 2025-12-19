@@ -13,8 +13,9 @@ import { Enrollment } from "../database/models/EnrollmentModel";
 import { Category } from "../database/models/CategoryModel";
 import { logActivity } from "../middleware/ActivityLog";
 import { In } from "typeorm";
-import parseCorrectAnswer from "../middleware/parseAnswers";
+import { parseCorrectAnswer, parseCorrectAnswer0 } from "../middleware/parseAnswers";
 import { ModuleFinal } from "../database/models/ModuleFinal";
+import { io } from "..";
 export interface CustomRequest extends Request {
   user?: Users; 
 }
@@ -143,6 +144,7 @@ export const createCourse = async (req: Request, res: Response) => {
                       question: q.question,
                       type: q.type,
                       options: q.options,
+                      pairs: q.pairs,
                       correctAnswer: q.correctAnswer,
                       points: q.points,
                       assessment: newAssessment,
@@ -335,7 +337,9 @@ export const getCourseById = async (req: Request, res: Response) => {
             if (q.type === "multiple_choice") {
               // multiple answers possible → array
               q.correctAnswer = parseCorrectAnswer(q.correctAnswer as any) as string[];
-            } else {
+            } else if(q.type === "matching") {
+              q.correctAnswer = parseCorrectAnswer0(q.correctAnswer as any)
+            }else {
               // just keep it as string
               q.correctAnswer = q.correctAnswer as string;
             }
@@ -576,7 +580,7 @@ export const updateCourse = async (req: Request, res: Response) => {
     if (instructorId) {
       await logActivity({
         userId: instructorId,
-        action: "Updated a course",
+        action: "Updated a course's basic details",
         targetId: String(course.id),
         targetType: "Course",
         details: `Updated a course: ${course.title}`,
@@ -622,7 +626,7 @@ export const updateCourseModules = async (req: Request, res: Response) => {
   const moduleFinalRepo = AppDataSource.getRepository(ModuleFinal);
   
   const { id } = req.params;
-  const { modules } = req.body;
+  const { modules, instructorId } = req.body;
 
   try {
     // Find the course
@@ -706,7 +710,7 @@ export const updateCourseModules = async (req: Request, res: Response) => {
             await moduleFinalRepo.save(moduleFinal);
             
             // Handle assessment type specifically
-            if (mod.finalAssessment.type === "assessment" && moduleFinal.assessment) {
+            if ((mod.finalAssessment.type === "assessment" || mod.finalAssessment.type === "final-assessment") && moduleFinal.assessment) {
               const assessment = moduleFinal.assessment;
               assessment.title = mod.finalAssessment.title ?? assessment.title;
               assessment.description = mod.finalAssessment.description ?? assessment.description;
@@ -725,6 +729,7 @@ export const updateCourseModules = async (req: Request, res: Response) => {
                       existingQuestion.question = q.question ?? existingQuestion.question;
                       existingQuestion.type = q.type ?? existingQuestion.type;
                       existingQuestion.options = q.options ?? existingQuestion.options;
+                      existingQuestion.pairs = q.pairs ?? existingQuestion.pairs;
                       existingQuestion.correctAnswer = q.correctAnswer ?? existingQuestion.correctAnswer;
                       existingQuestion.points = q.points ?? existingQuestion.points;
                       await questionRepo.save(existingQuestion);
@@ -762,6 +767,7 @@ export const updateCourseModules = async (req: Request, res: Response) => {
                     question: q.question,
                     type: q.type,
                     options: q.options,
+                    pairs: q.pairs,
                     correctAnswer: q.correctAnswer,
                     points: q.points,
                     assessment: newAssessment
@@ -808,6 +814,7 @@ export const updateCourseModules = async (req: Request, res: Response) => {
                     question: q.question,
                     type: q.type,
                     options: q.options,
+                    pairs: q.pairs,
                     correctAnswer: q.correctAnswer,
                     points: q.points,
                     assessment: finalAssessment
@@ -847,9 +854,9 @@ export const updateCourseModules = async (req: Request, res: Response) => {
                 lessonEntity.isProject = !!les.isProject;
                 lessonEntity.isExercise = !!les.isExercise;
                 
-                const resourcesJson = les.resources && les.resources.length > 0 
+                const resourcesJson = les.resources && les.resources.length > 0
                   ? JSON.stringify(les.resources) 
-                  : null;
+                  : typeof les.resources === 'object' ? les.resources : null;
                 lessonEntity.resources = resourcesJson;
                 
                 await lessonRepo.save(lessonEntity);
@@ -911,6 +918,7 @@ export const updateCourseModules = async (req: Request, res: Response) => {
                         existingQuestion.question = q.question ?? existingQuestion.question;
                         existingQuestion.type = q.type ?? existingQuestion.type;
                         existingQuestion.options = q.options ?? existingQuestion.options;
+                        existingQuestion.pairs = q.pairs ?? existingQuestion.pairs;
                         existingQuestion.correctAnswer = q.correctAnswer ?? existingQuestion.correctAnswer;
                         existingQuestion.points = q.points ?? existingQuestion.points;
                         await questionRepo.save(existingQuestion);
@@ -970,6 +978,16 @@ export const updateCourseModules = async (req: Request, res: Response) => {
       message: "Course modules updated successfully", 
       course: updatedCourse 
     });
+
+    if (instructorId) {
+      await logActivity({
+        userId: instructorId,
+        action: "Updated course modules",
+        targetId: String(course.id),
+        targetType: "Course",
+        details: `Updated a course: ${course.title}`,
+      });
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to update course modules" });
@@ -990,7 +1008,7 @@ export const deleteCourse = async (req: CustomRequest, res: Response) => {
     await logActivity({
       userId: req.user!.id,
       action: "Deleted a course",
-      targetId: String(course.id),
+      targetId: String(id),
       targetType: "Course",
       details: `Deleted a course: ${course.title}`,
     }); 

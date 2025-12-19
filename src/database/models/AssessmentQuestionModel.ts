@@ -30,6 +30,9 @@ export class AssessmentQuestion {
   @OneToMany(() => Answer, (answer) => answer.question)
   answers!: Answer[];
 
+  @Column({ type: "json", nullable: true })
+  pairs!: { left: string; right: string }[];
+
   @Column("int")
   points!: number;
 

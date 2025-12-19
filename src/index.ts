@@ -13,6 +13,7 @@ import path from "path";
 import pgSession from 'connect-pg-simple';
 import pg from 'pg';
 import { handleStripeWebhook } from "./webhooks/stripeWebhook";
+import { initSocket } from "./socket/socket";
 
 const { Pool } = pg;
 
@@ -165,42 +166,11 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
 }));
 
 // websockets
-import { Server } from 'socket.io';
 import http from 'http';
 import multer from "multer";
-
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: [
-    "http://localhost:3000",
-    "https://e-learning-yixk.onrender.com"
-  ],
-  credentials: true
-} 
-});
-
-io.on("connection", (socket) => {
-  console.log("Users connected:", socket.id);
-
-  socket.on("join", ({ userId, orgId }) => {
-    if (userId) {
-      socket.join(`user-${userId}`);
-      console.log(`Joined room: user-${userId}`);
-    }
-
-    if (orgId) {
-      socket.join(`organization-${orgId}`);
-      console.log(`Joined room: organization-${orgId}`);
-    }
-  });
-
-  socket.on("disconnect", () => {
-    console.log("Users disconnected:", socket.id);
-  });
-});
-
-// Export to use elsewhere
-export { io };
+const server = http.createServer(app)
+const io = initSocket(server)
+export { io }
 
 
 // Run server

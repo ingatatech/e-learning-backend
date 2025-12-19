@@ -7,6 +7,8 @@ import { AssessmentQuestion } from "../database/models/AssessmentQuestionModel"
 import { excludePassword } from "../utils/excludePassword"
 import { Progress } from "../database/models/ProgressModel"
 import { sendGradingCompleteEmail } from "../services/SessionOtp"
+import { io } from ".."
+import { parseCorrectAnswer0 } from "../middleware/parseAnswers"
 
 export const submitAnswers = async (req: Request, res: Response) => {
   try {
@@ -108,7 +110,49 @@ export const submitAnswers = async (req: Request, res: Response) => {
           isCorrect = true;
           pointsEarned = question.points;
         }
-      } else {
+      } else if (question.type === "matching") {
+          let submittedMap: Record<string, string> = {}
+
+          try {
+            submittedMap =
+              typeof answer === "string" ? JSON.parse(answer) : answer
+          } catch {
+            submittedMap = {}
+          }
+
+          let correctPairs: Array<{ left: string; right: string }> = []
+
+          try {
+            correctPairs =
+              typeof question.correctAnswer === "string"
+                ? parseCorrectAnswer0(question.correctAnswer as any)
+                : question.correctAnswer
+            
+          } catch {
+            correctPairs = []
+          }
+
+          let correctCount = 0
+
+          correctPairs.forEach((pair, index) => {
+            const submitted = normalize(submittedMap[index])
+            const correct = normalize(pair.right)
+
+            if (submitted && submitted === correct) {
+              correctCount++
+            }
+          })
+
+          // full or partial credit
+          if (correctCount > 0) {
+            pointsEarned = Math.round(
+              (correctCount / correctPairs.length) * question.points
+            )
+          }
+
+          isCorrect = correctCount === correctPairs.length
+      }
+      else {
         const correctSingle = normalize(String(question.correctAnswer));
         const submittedSingle = normalize(Array.isArray(answer) ? String(answer[0]) : String(answer));
         if (submittedSingle === correctSingle) {
@@ -319,6 +363,13 @@ export const gradeAssessmentManually = async (req: Request, res: Response) => {
           req
         )
       }
+      
+      io.to(`user-${studentId}`).emit("assessment:graded", {
+        assessmentId,
+        courseId: assessment.course?.id,
+        score: finalScore,
+        passed: finalScore >= assessment.passingScore,
+      })
     }
 
     return res.status(200).json({
