@@ -273,6 +273,12 @@ export const deleteDocument = async (req: CustomRequest, res: Response) => {
   try {
     const { docId } = req.params;
     const docRepo = AppDataSource.getRepository(Document);
+    const docMediaRepo = AppDataSource.getRepository(DocumentMedia);
+    const medias = await docMediaRepo.find({ where: { documentId: Number(docId) } });
+
+    if (medias.length > 0) {
+      await docMediaRepo.remove(medias);
+    }fix
     await docRepo.delete(docId);
     res.status(200).json({ message: "Document deleted" });
   } catch (err) {
