@@ -473,6 +473,40 @@ export const publishCourse = async (req: Request, res: Response) => {
     }
   }
 
+  export const getCoursesByOrganizationOuter = async (req: Request, res: Response) => {
+    const courseRepo = AppDataSource.getRepository(Course);
+    const organizationRepo = AppDataSource.getRepository(Organization);
+    const { orgId } = req.params;
+    const orgIdNum = Number(orgId);
+    if (isNaN(orgIdNum)) {
+      return res.status(400).json({ message: "Invalid organization id" });
+    }
+
+    try {
+      const organization = await organizationRepo.findOne({
+        where: { id: orgIdNum },
+      })
+      if (!organization) {
+        return res.status(404).json({ message: "Organization not found" });
+      }
+
+      const courses = await courseRepo.find({
+        where: { organization: { id: Number(orgId) } },
+        relations: ["category", "organization", "modules", "modules.lessons"],
+        order: { createdAt: "DESC" },
+      });
+
+      if (!courses || courses.length === 0) {
+        return res.status(404).json({ message: "No courses found in this organization" });
+      }
+
+      res.status(200).json({ message: "Courses fetched successfully", courses });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: "Failed to fetch courses" });
+    }
+  }
+
   export const getDraftCoursesByOrganization = async (req: Request, res: Response) => {
     const courseRepo = AppDataSource.getRepository(Course);
     const organizationRepo = AppDataSource.getRepository(Organization);
